@@ -1,0 +1,505 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #1e1e2e;
+  --color-bg-surface: #2a2a3d;
+  --color-bg-elevated: #313147;
+  --color-text-primary: #cdd6f4;
+  --color-text-muted: #6c7086;
+  --color-accent: #89b4fa;
+  --color-accent-hover: #74a8f0;
+  --color-border: #45475a;
+  --color-editor-bg: #181825;
+}
+
+:root {
+  --bg-primary: #1e1e2e;
+  --bg-surface: #2a2a3d;
+  --bg-elevated: #313147;
+  --text-primary: #cdd6f4;
+  --text-muted: #6c7086;
+  --accent: #89b4fa;
+  --accent-hover: #74a8f0;
+  --border: #45475a;
+  --editor-bg: #181825;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.cm-editor {
+  height: 100%;
+  background-color: var(--editor-bg) !important;
+}
+
+.cm-editor .cm-scroller {
+  /* Inherit font settings from the wrapper <div> so the Settings panel can
+     drive fontSize/fontFamily live (Fix-V). Without these inherits, the
+     scroller's own values would shadow .cm-content's `font: inherit`. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+/* ----- Toolbar buttons ----- */
+
+.toolbar-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: none;
+  background-color: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.toolbar-btn:hover:not(:disabled):not(.toolbar-btn-active) {
+  background-color: var(--bg-elevated);
+}
+
+.toolbar-btn:active:not(:disabled) {
+  background-color: var(--accent);
+  color: var(--bg-primary);
+}
+
+.toolbar-btn-active {
+  background-color: var(--accent);
+  color: var(--bg-primary);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ----- Preview prose styles (Avalonia-inspired) ----- */
+
+.preview-content {
+  line-height: 1.75;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Headings — Avalonia-inspired warm hierarchy */
+.preview-content h1 {
+  font-size: 2em;
+  font-weight: 700;
+  color: #d4a843;   /* warm gold — dark mode anchor; overridden for Ink below */
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+.preview-content h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  color: #4ec9b0;   /* teal-green; overridden for Ink below */
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+.preview-content h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  color: #4ec9b0;
+  margin-top: 1.2em;
+  margin-bottom: 0.3em;
+}
+.preview-content h4 { font-size: 1.1em; font-weight: 600; color: var(--accent); margin-top: 1em; margin-bottom: 0.3em; }
+.preview-content h5 { font-size: 1em;   font-weight: 600; color: var(--accent); margin-top: 1em; margin-bottom: 0.3em; }
+.preview-content h6 { font-size: 0.9em; font-weight: 600; color: var(--text-muted); margin-top: 1em; margin-bottom: 0.3em; }
+
+/* Heading click affordance for Preview → Editor jump */
+.preview-content h1[data-source-line],
+.preview-content h2[data-source-line],
+.preview-content h3[data-source-line],
+.preview-content h4[data-source-line],
+.preview-content h5[data-source-line],
+.preview-content h6[data-source-line] {
+  cursor: pointer;
+}
+.preview-content h1[data-source-line]:hover,
+.preview-content h2[data-source-line]:hover,
+.preview-content h3[data-source-line]:hover,
+.preview-content h4[data-source-line]:hover,
+.preview-content h5[data-source-line]:hover,
+.preview-content h6[data-source-line]:hover {
+  opacity: 0.85;
+}
+
+/* Active section highlight (Editor → Preview) */
+.preview-content .preview-heading-active {
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+  margin-left: -11px;   /* compensate so heading text stays aligned with body */
+  transition: border-color 0.15s;
+}
+
+/* GHS Ink (light) heading overrides — warmer colors for light backgrounds */
+:root.ink .preview-content h1,
+body.ink .preview-content h1 {
+  color: #0550ae;   /* steel blue for light mode */
+}
+:root.ink .preview-content h2,
+body.ink .preview-content h2,
+:root.ink .preview-content h3,
+body.ink .preview-content h3 {
+  color: #1a7f37;   /* forest green for light mode */
+}
+
+/* Paragraphs */
+.preview-content p {
+  margin-top: 0;
+  margin-bottom: 1em;
+  color: var(--text-primary);
+}
+
+/* Links */
+.preview-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.preview-content a:hover { color: var(--accent-hover); }
+
+/* Inline code */
+.preview-content code {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.875em;
+  background: var(--bg-elevated);
+  color: #f97583;   /* soft pink-red — matches Avalonia inline code */
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+/* Code blocks */
+.preview-content pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1em 1.25em;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.preview-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 0.875em;
+}
+
+/* Blockquote */
+.preview-content blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-radius: 0 4px 4px 0;
+}
+.preview-content blockquote p { margin-bottom: 0; }
+
+/* Lists */
+.preview-content ul,
+.preview-content ol {
+  padding-left: 1.75em;
+  margin-bottom: 1em;
+}
+.preview-content li { margin-bottom: 0.25em; color: var(--text-primary); }
+.preview-content li::marker { color: var(--accent); }
+
+/* Task lists */
+.preview-content input[type="checkbox"] {
+  margin-right: 0.4em;
+  accent-color: var(--accent);
+}
+
+/* Strikethrough */
+.preview-content del {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* Horizontal rule */
+.preview-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+/* Tables */
+.preview-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+.preview-content th {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.preview-content td {
+  padding: 0.45em 0.75em;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.preview-content tr:nth-child(even) td {
+  background: var(--bg-surface);
+}
+
+/* Images */
+.preview-content img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 0.5em 0;
+}
+
+/* Strong / Em */
+.preview-content strong { color: var(--text-primary); font-weight: 700; }
+.preview-content em { font-style: italic; }
+
+/* ----- Highlight.js syntax theme -----
+   GitHub-Dark-inspired palette for the new Avalonia-style themes.
+   Ink-mode overrides at the bottom of this block. */
+
+.preview-content .hljs { color: var(--text-primary); background: transparent; }
+
+.hljs-comment,
+.hljs-quote { color: #8b949e; font-style: italic; }
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name,
+.hljs-tag { color: #ff7b72; }          /* coral red — keywords */
+
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-literal,
+.hljs-addition { color: #a5d6ff; }     /* light blue — strings */
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-regexp { color: #79c0ff; }       /* blue — numbers */
+
+.hljs-function > .hljs-title,
+.hljs-title.function_ { color: #d2a8ff; }  /* purple — function names */
+
+.hljs-title.class_,
+.hljs-class .hljs-title { color: #ffa657; }  /* orange — class names */
+
+.hljs-variable,
+.hljs-params { color: #e6edf3; }       /* near-white — variables */
+
+.hljs-attr { color: #79c0ff; }         /* blue — attributes */
+
+.hljs-deletion,
+.hljs-meta { color: #ffa198; }         /* light red — deletions */
+
+.hljs-doctag,
+.hljs-strong { font-weight: bold; }
+
+.hljs-emphasis { font-style: italic; }
+
+.hljs-selector-id,
+.hljs-selector-class { color: #ffa657; }
+
+/* Ink (light) mode overrides for syntax highlighting */
+:root.ink .hljs-keyword,
+:root.ink .hljs-selector-tag,
+:root.ink .hljs-built_in { color: #cf222e; }
+
+:root.ink .hljs-string,
+:root.ink .hljs-addition { color: #0a3069; }
+
+:root.ink .hljs-number,
+:root.ink .hljs-symbol { color: #0550ae; }
+
+:root.ink .hljs-function > .hljs-title,
+:root.ink .hljs-title.function_ { color: #6639ba; }
+
+:root.ink .hljs-title.class_ { color: #953800; }
+
+:root.ink .hljs-variable,
+:root.ink .hljs-params { color: #24292f; }
+
+:root.ink .hljs-comment { color: #6e7781; }
+
+:root.ink .hljs-attr { color: #0550ae; }
+
+/* ── CodeMirror Search Panel (GHS-themed) ────────────────────────────── */
+/* CodeMirror's @search extension injects a panel with its own stylesheet.
+   Every rule below uses !important to defeat that internal stylesheet —
+   same pattern as .cm-selectionBackground in Fix-O2. */
+
+.cm-search {
+  background: var(--bg-elevated) !important;
+  border-top: 1px solid var(--border) !important;
+  padding: 6px 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  font-family: system-ui, -apple-system, sans-serif !important;
+  font-size: 13px !important;
+}
+
+.cm-search input[type="text"] {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  font-size: 13px !important;
+  outline: none !important;
+  min-width: 160px !important;
+}
+
+.cm-search input[type="text"]:focus {
+  border-color: var(--accent) !important;
+  outline: 1px solid var(--accent) !important;
+  outline-offset: -1px !important;
+}
+
+.cm-search input[type="text"]::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.cm-search button {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: background 0.1s, border-color 0.1s !important;
+}
+
+.cm-search button:hover {
+  background: var(--bg-elevated) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.cm-search button:active {
+  background: var(--accent) !important;
+  color: var(--bg-primary) !important;
+  border-color: var(--accent) !important;
+}
+
+.cm-search button[name="close"],
+.cm-search .cm-button[name="close"] {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted) !important;
+  font-size: 16px !important;
+  padding: 2px 6px !important;
+  line-height: 1 !important;
+}
+
+.cm-search button[name="close"]:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface) !important;
+  border: none !important;
+}
+
+.cm-search input[type="checkbox"] {
+  accent-color: var(--accent) !important;
+  width: 13px !important;
+  height: 13px !important;
+  cursor: pointer !important;
+}
+
+.cm-search label {
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.cm-search label:hover {
+  color: var(--text-primary) !important;
+}
+
+.cm-searchMatch {
+  background: rgba(212, 168, 67, 0.25) !important;
+  border-radius: 2px !important;
+}
+
+.cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(212, 168, 67, 0.55) !important;
+  outline: 1px solid #d4a843 !important;
+}
+
+:root.ink .cm-searchMatch {
+  background: rgba(5, 80, 174, 0.15) !important;
+}
+
+:root.ink .cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(5, 80, 174, 0.35) !important;
+  outline: 1px solid #0550ae !important;
+}
+
+.cm-search .cm-search-separator {
+  width: 100% !important;
+  height: 0 !important;
+}
+

@@ -1,0 +1,36 @@
+# Tauri build output
+src-tauri/target/
+
+# Frontend build output
+dist/
+
+# Node modules
+node_modules/
+
+# Claude Code working folder
+.claude/
+
+# Docs folder — only SPEC.md is tracked; all phase/fix results files are local only
+docs/Phase*.md
+docs/PHASE*.md
+docs/FIX*.md
+docs/Fix*.md
+docs/Results*.md
+docs/SPEC-DIFF.md
+
+# Draft and local editor files
+*.draft
+*.local
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
