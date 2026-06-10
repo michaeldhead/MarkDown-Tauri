@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Clipboard, Download } from 'lucide-react'
+import { Clipboard, Download, FileText } from 'lucide-react'
 
 type ExportDialogProps = {
   isOpen: boolean
@@ -7,6 +7,8 @@ type ExportDialogProps = {
   fileName: string
   onExportHtmlStyled: () => void
   onExportHtmlClean: () => void
+  onExportDocx: () => void
+  onExportWordHtml: () => void
   onExportPdf: () => void
   onExportText: () => void
   onCopyMarkdown: () => void
@@ -56,6 +58,8 @@ export default function ExportDialog({
   fileName,
   onExportHtmlStyled,
   onExportHtmlClean,
+  onExportDocx,
+  onExportWordHtml,
   onExportPdf,
   onExportText,
   onCopyMarkdown,
@@ -142,6 +146,18 @@ export default function ExportDialog({
           label="HTML — Clean"
           sublabel="raw HTML"
           onClick={run(onExportHtmlClean)}
+        />
+        <Row
+          Icon={FileText}
+          label="Word Document"
+          sublabel=".docx"
+          onClick={run(onExportDocx)}
+        />
+        <Row
+          Icon={FileText}
+          label="Word (HTML)"
+          sublabel=".doc — best compatibility"
+          onClick={run(onExportWordHtml)}
         />
         <Row
           Icon={Download}

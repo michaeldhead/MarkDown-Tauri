@@ -373,6 +373,396 @@ async fn show_editor_context_menu(
     Ok(())
 }
 
+// ----- Silent PDF export (Fix-Y) -----
+//
+// Renders print-styled HTML to a PDF on disk with no print dialog. The flow:
+//   1. Frontend hands us the already-rendered print HTML and a target path.
+//   2. We spin up a hidden, off-screen WebviewWindow on about:blank.
+//   3. with_webview() hands the closure the live WebView2 controller on the
+//      UI thread. Neither tauri 2.11 nor wry 0.55 wrap print-to-pdf, so we
+//      reach ICoreWebView2_7::PrintToPdf through the raw COM bindings.
+//   4. We register a NavigationCompleted handler, then NavigateToString() the
+//      HTML. When that navigation finishes we call PrintToPdf; its completion
+//      handler reports success/failure back over an mpsc channel.
+//   5. The async command blocks (on a worker thread) until the channel fires
+//      or a timeout elapses, then destroys the hidden window.
+//
+// WebView2 COM objects are thread-affine to the UI thread that created them;
+// with_webview's closure and both event/completion handlers all run there, so
+// the unsafe COM calls are sound. We only ever wait from a separate worker
+// thread (spawn_blocking), never from the UI thread, so no deadlock.
+
+#[cfg(windows)]
+fn print_to_pdf_via_webview(
+    platform: tauri::webview::PlatformWebview,
+    html: String,
+    output_path: String,
+    tx: std::sync::mpsc::Sender<Result<(), String>>,
+) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2Environment6, ICoreWebView2_2, ICoreWebView2_7,
+    };
+    use webview2_com::{NavigationCompletedEventHandler, PrintToPdfCompletedHandler};
+    use windows::core::{Interface, HSTRING, PCWSTR};
+
+    // A4 paper, in inches (WebView2 print-settings units). Margins are owned
+    // here rather than via CSS @page so they're deterministic — print-settings
+    // margins are the paper margins Chromium always honors, whereas CSS @page
+    // margin handling varies. The print HTML therefore uses @page margin: 0.
+    const A4_WIDTH_IN: f64 = 8.27;
+    const A4_HEIGHT_IN: f64 = 11.69;
+    const MARGIN_V_IN: f64 = 0.787; // ~20mm top/bottom
+    const MARGIN_H_IN: f64 = 0.709; // ~18mm left/right
+
+    let controller = platform.controller();
+    let core = match unsafe { controller.CoreWebView2() } {
+        Ok(c) => c,
+        Err(e) => {
+            let _ = tx.send(Err(format!("CoreWebView2() failed: {e}")));
+            return;
+        }
+    };
+    // ICoreWebView2_7 ships with WebView2 Runtime 88+ (mid-2021); PrintToPdf
+    // lives on this revision. A failed cast means an ancient runtime.
+    let webview7: ICoreWebView2_7 = match core.cast() {
+        Ok(w) => w,
+        Err(e) => {
+            let _ = tx.send(Err(format!(
+                "ICoreWebView2_7 unavailable (WebView2 runtime too old for PrintToPdf): {e}"
+            )));
+            return;
+        }
+    };
+
+    // Build print settings: A4, our margins, and ShouldPrintBackgrounds(true)
+    // so the code-block / table / blockquote background shading actually
+    // renders (it defaults to off). Settings come from the environment, which
+    // we reach via the _2 revision. If any of this fails we fall back to None
+    // (default Letter, no backgrounds) rather than aborting the export.
+    let print_settings = (|| {
+        let env = unsafe { core.cast::<ICoreWebView2_2>().ok()?.Environment().ok()? };
+        let s = unsafe { env.cast::<ICoreWebView2Environment6>().ok()?.CreatePrintSettings().ok()? };
+        unsafe {
+            s.SetPageWidth(A4_WIDTH_IN).ok()?;
+            s.SetPageHeight(A4_HEIGHT_IN).ok()?;
+            s.SetMarginTop(MARGIN_V_IN).ok()?;
+            s.SetMarginBottom(MARGIN_V_IN).ok()?;
+            s.SetMarginLeft(MARGIN_H_IN).ok()?;
+            s.SetMarginRight(MARGIN_H_IN).ok()?;
+            s.SetShouldPrintBackgrounds(true).ok()?;
+        }
+        Some(s)
+    })();
+
+    // HSTRING owns the wide buffers PCWSTR points into; both must outlive the
+    // (synchronous) PrintToPdf call, so they live inside the nav closure.
+    let output_hstring = HSTRING::from(output_path);
+    let tx_nav = tx.clone();
+    // We register the handler *before* NavigateToString, so the first
+    // completion we see is our own navigation. The guard defends against any
+    // stray re-fire so we never print twice.
+    let printed = std::cell::Cell::new(false);
+
+    let nav_handler = NavigationCompletedEventHandler::create(Box::new(move |_wv, _args| {
+        if printed.get() {
+            return Ok(());
+        }
+        printed.set(true);
+
+        let tx_done = tx_nav.clone();
+        let pdf_handler = PrintToPdfCompletedHandler::create(Box::new(move |result, success| {
+            let outcome = match result {
+                Ok(()) if success => Ok(()),
+                Ok(()) => Err("PrintToPdf reported failure (success=false)".to_string()),
+                Err(e) => Err(format!("PrintToPdf error: {e}")),
+            };
+            let _ = tx_done.send(outcome);
+            Ok(())
+        }));
+
+        if let Err(e) = unsafe {
+            webview7.PrintToPdf(
+                PCWSTR(output_hstring.as_ptr()),
+                print_settings.as_ref(),
+                &pdf_handler,
+            )
+        } {
+            let _ = tx_nav.send(Err(format!("PrintToPdf invocation failed: {e}")));
+        }
+        Ok(())
+    }));
+
+    let mut token: i64 = 0;
+    if let Err(e) = unsafe { core.add_NavigationCompleted(&nav_handler, &mut token) } {
+        let _ = tx.send(Err(format!("add_NavigationCompleted failed: {e}")));
+        return;
+    }
+
+    let html_hstring = HSTRING::from(html);
+    if let Err(e) = unsafe { core.NavigateToString(&html_hstring) } {
+        let _ = tx.send(Err(format!("NavigateToString failed: {e}")));
+    }
+}
+
+#[cfg(windows)]
+#[tauri::command]
+async fn export_pdf_silent(
+    app: tauri::AppHandle,
+    html: String,
+    output_path: String,
+) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+
+    let label = format!(
+        "pdf-export-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+
+    // Hidden, off-screen window sized to US Letter at 96 DPI so layout/page
+    // breaks match the PDF page box. @page CSS in the print HTML still governs
+    // the final paper size and margins.
+    let window = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("about:blank".into()))
+        .visible(false)
+        .title("PDF Export")
+        .inner_size(816.0, 1056.0)
+        .build()
+        .map_err(|e| format!("Failed to create PDF window: {e}"))?;
+
+    let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
+
+    if let Err(e) = window.with_webview(move |platform| {
+        print_to_pdf_via_webview(platform, html, output_path, tx);
+    }) {
+        let _ = window.destroy();
+        return Err(format!("with_webview failed: {e}"));
+    }
+
+    // Wait off the UI thread for the COM completion handler to report. 30s is
+    // generous headroom over the sub-second render+print a typical document
+    // takes; it only trips if the runtime is missing or the webview wedges.
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        rx.recv_timeout(std::time::Duration::from_secs(30))
+            .unwrap_or_else(|_| Err("PDF export timed out after 30s".to_string()))
+    })
+    .await
+    .map_err(|e| format!("Export task join error: {e}"))?;
+
+    let _ = window.destroy();
+    result
+}
+
+// Non-Windows fallback so the command stays registered and the project still
+// compiles off-Windows. WebView2 (and thus silent PrintToPdf) is Windows-only.
+#[cfg(not(windows))]
+#[tauri::command]
+async fn export_pdf_silent(
+    _app: tauri::AppHandle,
+    _html: String,
+    _output_path: String,
+) -> Result<(), String> {
+    Err("Silent PDF export is only supported on Windows (WebView2).".to_string())
+}
+
+// ----- Word (.docx) export (Fix-Z) -----
+//
+// Walks the markdown AST via pulldown-cmark and emits a real OOXML .docx via
+// docx-rs. Inline state (bold/italic/strike/code) is tracked as a stack of
+// flags; text runs accumulate into `current_runs` and flush into a styled
+// Paragraph at each block boundary. We lean on the built-in Word styles
+// (Heading1..6, Normal, ListParagraph, IntenseQuote) so the document inherits
+// the user's template fonts/colours rather than hard-coding them.
+#[tauri::command]
+fn export_docx(path: String, content: String) -> Result<(), String> {
+    use docx_rs::*;
+    use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+
+    let mut docx = Docx::new();
+
+    let options = Options::all();
+    let parser = Parser::new_ext(&content, options);
+
+    let mut current_runs: Vec<Run> = Vec::new();
+    let mut is_bold = false;
+    let mut is_italic = false;
+    let mut is_strikethrough = false;
+    let mut current_heading_level: Option<u8> = None;
+    let mut in_code_block = false;
+    let mut code_block_text = String::new();
+    let mut list_depth: usize = 0;
+    let mut is_ordered = false;
+    let mut list_item_number = 1u32;
+    let mut in_blockquote = false;
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::Heading { level, .. }) => {
+                current_heading_level = Some(match level {
+                    HeadingLevel::H1 => 1,
+                    HeadingLevel::H2 => 2,
+                    HeadingLevel::H3 => 3,
+                    HeadingLevel::H4 => 4,
+                    HeadingLevel::H5 => 5,
+                    HeadingLevel::H6 => 6,
+                });
+                current_runs.clear();
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                let level = current_heading_level.take().unwrap_or(1);
+                let style = match level {
+                    1 => "Heading1",
+                    2 => "Heading2",
+                    3 => "Heading3",
+                    4 => "Heading4",
+                    5 => "Heading5",
+                    _ => "Heading6",
+                };
+                let mut para = Paragraph::new().style(style);
+                for run in current_runs.drain(..) {
+                    para = para.add_run(run);
+                }
+                docx = docx.add_paragraph(para);
+            }
+
+            Event::Start(Tag::Paragraph) => {
+                current_runs.clear();
+            }
+            Event::End(TagEnd::Paragraph) => {
+                let style = if in_blockquote { "IntenseQuote" } else { "Normal" };
+                let mut para = Paragraph::new().style(style);
+                if in_blockquote {
+                    para = para.indent(Some(720), None, None, None);
+                }
+                for run in current_runs.drain(..) {
+                    para = para.add_run(run);
+                }
+                docx = docx.add_paragraph(para);
+            }
+
+            Event::Start(Tag::Strong) => is_bold = true,
+            Event::End(TagEnd::Strong) => is_bold = false,
+            Event::Start(Tag::Emphasis) => is_italic = true,
+            Event::End(TagEnd::Emphasis) => is_italic = false,
+            Event::Start(Tag::Strikethrough) => is_strikethrough = true,
+            Event::End(TagEnd::Strikethrough) => is_strikethrough = false,
+
+            Event::Code(text) => {
+                let run = Run::new()
+                    .add_text(text.as_ref())
+                    .fonts(RunFonts::new().ascii("Consolas"))
+                    .size(18); // 9pt in half-points
+                current_runs.push(run);
+            }
+
+            Event::Start(Tag::CodeBlock(_)) => {
+                in_code_block = true;
+                code_block_text.clear();
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                in_code_block = false;
+                for line in code_block_text.lines() {
+                    let run = Run::new()
+                        .add_text(line)
+                        .fonts(RunFonts::new().ascii("Consolas"))
+                        .size(18);
+                    let para = Paragraph::new()
+                        .style("Normal")
+                        .indent(Some(720), None, None, None)
+                        .add_run(run);
+                    docx = docx.add_paragraph(para);
+                }
+                code_block_text.clear();
+            }
+
+            Event::Start(Tag::BlockQuote(_)) => {
+                in_blockquote = true;
+            }
+            Event::End(TagEnd::BlockQuote(_)) => {
+                in_blockquote = false;
+            }
+
+            Event::Start(Tag::List(order)) => {
+                list_depth += 1;
+                is_ordered = order.is_some();
+                list_item_number = order.unwrap_or(1) as u32;
+            }
+            Event::End(TagEnd::List(_)) => {
+                if list_depth > 0 {
+                    list_depth -= 1;
+                }
+            }
+            Event::Start(Tag::Item) => {
+                current_runs.clear();
+            }
+            Event::End(TagEnd::Item) => {
+                let indent = (list_depth as i32) * 360;
+                let mut para = Paragraph::new()
+                    .style("ListParagraph")
+                    .indent(Some(indent), None, None, None);
+
+                if is_ordered {
+                    let num_run = Run::new().add_text(format!("{}. ", list_item_number));
+                    para = para.add_run(num_run);
+                    list_item_number += 1;
+                } else {
+                    let bullet_run = Run::new().add_text("• ");
+                    para = para.add_run(bullet_run);
+                }
+
+                for run in current_runs.drain(..) {
+                    para = para.add_run(run);
+                }
+                docx = docx.add_paragraph(para);
+            }
+
+            Event::Text(text) => {
+                if in_code_block {
+                    code_block_text.push_str(&text);
+                } else {
+                    let mut run = Run::new().add_text(text.as_ref());
+                    if is_bold {
+                        run = run.bold();
+                    }
+                    if is_italic {
+                        run = run.italic();
+                    }
+                    if is_strikethrough {
+                        run = run.strike();
+                    }
+                    current_runs.push(run);
+                }
+            }
+
+            Event::SoftBreak | Event::HardBreak => {
+                if !in_code_block {
+                    let run = Run::new().add_break(BreakType::TextWrapping);
+                    current_runs.push(run);
+                }
+            }
+
+            Event::Rule => {
+                // Horizontal rule — emit an empty paragraph as a visual gap.
+                let para = Paragraph::new().style("Normal");
+                docx = docx.add_paragraph(para);
+            }
+
+            // Images, raw HTML, footnotes, task-list markers: skipped for now.
+            _ => {}
+        }
+    }
+
+    let output_path = std::path::Path::new(&path);
+    let file = std::fs::File::create(output_path)
+        .map_err(|e| format!("Failed to create file: {e}"))?;
+    docx.build()
+        .pack(file)
+        .map_err(|e| format!("Failed to write DOCX: {e}"))?;
+
+    Ok(())
+}
+
 fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let file_menu = Submenu::with_items(
         app,
@@ -425,6 +815,8 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "export_html_styled", "HTML (Styled)", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_html_clean", "HTML (Clean)", true, None::<&str>)?,
+            &MenuItem::with_id(app, "export_docx", "Word Document (.docx)", true, None::<&str>)?,
+            &MenuItem::with_id(app, "export_word_html", "Word HTML (.doc)", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_text", "Plain Text", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_pdf", "PDF (Print to PDF)...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
@@ -507,6 +899,8 @@ pub fn run() {
             register_file_association,
             check_file_association,
             show_editor_context_menu,
+            export_pdf_silent,
+            export_docx,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

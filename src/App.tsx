@@ -33,7 +33,13 @@ import {
 import type { PaletteItem } from './lib/palette'
 import { buildTopology, countWords, getActiveSectionIndex } from './lib/outline'
 import { slugFromPath, snapshotFilename } from './lib/timeline'
-import { printDocumentAsPdf, renderMarkdown, wrapAsCleanHtml, wrapAsStyledHtml } from './lib/preview'
+import {
+  renderMarkdown,
+  wrapAsCleanHtml,
+  wrapAsPrintHtml,
+  wrapAsStyledHtml,
+  wrapAsWordHtml,
+} from './lib/preview'
 import { DEFAULT_SNIPPETS, type Snippet } from './lib/snippets'
 
 import {
@@ -938,11 +944,55 @@ function MainWindowApp() {
 
   const exportPdf = useCallback(async () => {
     try {
-      await printDocumentAsPdf(content, exportTitleBase)
+      // Pick the destination first so a cancel costs no rendering work.
+      const outputPath = await invoke<string | null>('save_dialog', {
+        defaultName: `${exportTitleBase}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      })
+      if (!outputPath) return
+
+      // Render to print-styled HTML, then let the Rust side drive WebView2's
+      // native PrintToPdf — no print dialog, straight to the chosen path.
+      const body = await renderMarkdown(content)
+      const html = wrapAsPrintHtml(body, exportTitleBase)
+      await invoke('export_pdf_silent', { html, outputPath })
     } catch (err) {
       console.error('PDF export failed:', err)
+      const { message } = await import('@tauri-apps/plugin-dialog')
+      await message(`PDF export failed: ${String(err)}`, {
+        title: 'Export Error',
+        kind: 'error',
+      })
     }
   }, [content, exportTitleBase])
+
+  const exportDocx = useCallback(async () => {
+    try {
+      const outputPath = await invoke<string | null>('save_dialog', {
+        defaultName: `${exportTitleBase}.docx`,
+        filters: [{ name: 'Word Document', extensions: ['docx'] }],
+      })
+      if (!outputPath) return
+      await invoke('export_docx', { path: outputPath, content })
+    } catch (err) {
+      console.error('DOCX export failed:', err)
+      const { message } = await import('@tauri-apps/plugin-dialog')
+      await message(`Word (.docx) export failed: ${String(err)}`, {
+        title: 'Export Error',
+        kind: 'error',
+      })
+    }
+  }, [content, exportTitleBase])
+
+  const exportWordHtml = useCallback(async () => {
+    const body = await renderMarkdown(content)
+    const html = wrapAsWordHtml(body, exportTitleBase)
+    await saveExport(
+      `${exportTitleBase}.doc`,
+      [{ name: 'Word Document', extensions: ['doc'] }],
+      html,
+    )
+  }, [content, exportTitleBase, saveExport])
 
   const copyMarkdown = useCallback(async () => {
     try {
@@ -1061,6 +1111,8 @@ function MainWindowApp() {
     exportHtmlClean,
     exportPlainText,
     exportPdf,
+    exportDocx,
+    exportWordHtml,
     copyMarkdown,
     editorView,
     openCodeBlockPicker,
@@ -1076,6 +1128,8 @@ function MainWindowApp() {
     exportHtmlClean,
     exportPlainText,
     exportPdf,
+    exportDocx,
+    exportWordHtml,
     copyMarkdown,
     editorView,
     openCodeBlockPicker,
@@ -1124,6 +1178,12 @@ function MainWindowApp() {
           break
         case 'export_pdf':
           void h.exportPdf()
+          break
+        case 'export_docx':
+          void h.exportDocx()
+          break
+        case 'export_word_html':
+          void h.exportWordHtml()
           break
         case 'export_copy_md':
           void h.copyMarkdown()
@@ -1695,6 +1755,8 @@ function MainWindowApp() {
       { id: 'cmd-export-html-clean', kind: 'command', label: 'Export HTML (Clean)', detail: 'Export', action: () => void exportHtmlClean() },
       { id: 'cmd-export-text', kind: 'command', label: 'Export Plain Text', detail: 'Export', action: () => void exportPlainText() },
       { id: 'cmd-export-pdf', kind: 'command', label: 'Export PDF', detail: 'Export', action: () => void exportPdf() },
+      { id: 'cmd-export-docx', kind: 'command', label: 'Export Word (.docx)', detail: 'Export', action: () => void exportDocx() },
+      { id: 'cmd-export-word-html', kind: 'command', label: 'Export Word HTML (.doc)', detail: 'Export', action: () => void exportWordHtml() },
       { id: 'cmd-copy-md', kind: 'command', label: 'Copy Markdown', detail: 'Export', action: () => void copyMarkdown() },
     )
 
@@ -1750,6 +1812,8 @@ function MainWindowApp() {
     exportHtmlClean,
     exportPlainText,
     exportPdf,
+    exportDocx,
+    exportWordHtml,
     copyMarkdown,
     openFileByPath,
     openCodeBlockPicker,
@@ -1953,6 +2017,8 @@ function MainWindowApp() {
         fileName={filePath ? basename(filePath) : 'Untitled'}
         onExportHtmlStyled={() => void exportHtmlStyled()}
         onExportHtmlClean={() => void exportHtmlClean()}
+        onExportDocx={() => void exportDocx()}
+        onExportWordHtml={() => void exportWordHtml()}
         onExportPdf={() => void exportPdf()}
         onExportText={() => void exportPlainText()}
         onCopyMarkdown={() => void copyMarkdown()}

@@ -1,6 +1,6 @@
 [package]
 name = "markdown-tauri"
-version = "0.2.0"
+version = "0.2.1"
 description = "GHS Markdown Editor — Tauri"
 authors = []
 edition = "2021"
@@ -21,3 +21,17 @@ tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Word (.docx) export (Fix-Z). docx-rs builds the OOXML package; pulldown-cmark
+# walks the markdown AST so styling maps to Word paragraph/run properties.
+# Neither was a transitive dependency of the existing tauri/wry tree.
+docx-rs = "0.4"
+pulldown-cmark = "0.12"
+
+# Silent PDF export (Fix-Y) drives WebView2's native ICoreWebView2_7::PrintToPdf
+# COM API directly — neither tauri 2.11 nor wry 0.55 expose a print-to-pdf
+# wrapper, so we reach the controller via WebviewWindow::with_webview and call
+# the COM method ourselves. Versions are pinned to what tauri/wry already
+# resolve in Cargo.lock so no extra copies are pulled in.
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38"
+windows = { version = "0.61", features = ["Win32_Foundation"] }

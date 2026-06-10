@@ -147,38 +147,99 @@ ${bodyHtml}
 }
 
 const PRINT_HTML_CSS = `
-  @page { margin: 18mm 16mm; }
-  body { font-family: Georgia, "Times New Roman", serif;
-         font-size: 11pt; line-height: 1.55; color: #1a1a1a; background: #fff;
-         margin: 0; padding: 0; }
-  h1, h2, h3, h4, h5, h6 { color: #000; line-height: 1.2;
-                            margin: 1.2em 0 0.4em; font-weight: 700;
-                            page-break-after: avoid; }
-  h1 { font-size: 22pt; border-bottom: 1px solid #999; padding-bottom: 4pt; }
-  h2 { font-size: 17pt; border-bottom: 1px solid #ccc; padding-bottom: 3pt; }
+  /* Paper size and margins are set on the Rust side via WebView2 print
+     settings (A4, ~20mm/18mm) so they apply deterministically to PrintToPdf;
+     margin is 0 here to avoid stacking on top of the print-settings margins. */
+  @page {
+    margin: 0;
+    size: A4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: -apple-system, Arial, sans-serif;
+    color: #111;
+    line-height: 1.3;
+    margin: 1.4em 0 0.5em;
+    font-weight: 700;
+    page-break-after: avoid;
+  }
+  h1 { font-size: 24pt; border-bottom: 2px solid #333; padding-bottom: 6pt; }
+  h2 { font-size: 18pt; border-bottom: 1px solid #aaa; padding-bottom: 4pt; }
   h3 { font-size: 14pt; }
   h4 { font-size: 12pt; }
-  h5, h6 { font-size: 11pt; color: #444; }
-  p { margin: 0.5em 0; }
+  h5, h6 { font-size: 11pt; color: #555; }
+  p { margin: 0 0 0.8em; }
   a { color: #0050a0; text-decoration: underline; }
-  code { font-family: "Consolas", "Courier New", monospace;
-         background: #f0f0f0; padding: 1pt 4pt; border-radius: 2pt;
-         font-size: 0.92em; }
-  pre { background: #f6f6f6; border: 1px solid #ddd; padding: 8pt 10pt;
-        border-radius: 3pt; overflow: hidden;
-        page-break-inside: avoid; }
-  pre code { background: transparent; padding: 0; font-size: 9.5pt; }
-  blockquote { border-left: 3pt solid #888; padding: 0 12pt;
-               margin: 0.8em 0; color: #444; font-style: italic; }
-  ul, ol { padding-left: 1.6em; margin: 0.5em 0; }
-  li { margin: 0.15em 0; }
-  hr { border: 0; border-top: 1px solid #ccc; margin: 1.4em 0; }
-  table { border-collapse: collapse; width: 100%; margin: 0.8em 0;
-          page-break-inside: avoid; }
-  th, td { border: 1px solid #888; padding: 4pt 7pt; text-align: left;
-           font-size: 10pt; }
-  th { background: #efefef; font-weight: 700; }
-  img { max-width: 100%; }
+  code {
+    font-family: Consolas, 'Courier New', monospace;
+    background: #f5f5f5;
+    padding: 1pt 4pt;
+    border-radius: 3pt;
+    font-size: 9.5pt;
+    border: 1px solid #e0e0e0;
+  }
+  pre {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4pt;
+    padding: 10pt 12pt;
+    overflow: hidden;
+    page-break-inside: avoid;
+    margin: 0.8em 0;
+  }
+  pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 9pt;
+  }
+  blockquote {
+    border-left: 4pt solid #888;
+    padding: 4pt 12pt;
+    margin: 0.8em 0;
+    color: #555;
+    font-style: italic;
+    background: #fafafa;
+  }
+  ul, ol { padding-left: 1.8em; margin: 0.5em 0; }
+  li { margin: 0.2em 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    page-break-inside: avoid;
+    font-size: 10pt;
+  }
+  th {
+    background: #efefef;
+    font-weight: 700;
+    padding: 5pt 8pt;
+    border: 1px solid #bbb;
+    text-align: left;
+  }
+  td {
+    padding: 4pt 8pt;
+    border: 1px solid #ccc;
+  }
+  tr:nth-child(even) td { background: #f9f9f9; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }
+  img { max-width: 100%; page-break-inside: avoid; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  del { text-decoration: line-through; color: #888; }
+  @media print {
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
 `
 
 export function wrapAsPrintHtml(bodyHtml: string, title: string): string {
@@ -196,44 +257,82 @@ ${bodyHtml}
 `
 }
 
-/**
- * Renders the current document and triggers the OS print dialog through a
- * hidden iframe. The user can choose "Microsoft Print to PDF" to save as PDF.
- * Printing the iframe (rather than `window.print()`) keeps toolbar / sidebar /
- * editor chrome out of the printout regardless of the current view mode.
- */
-export async function printDocumentAsPdf(content: string, title: string): Promise<void> {
-  const body = await renderMarkdown(content)
-  const html = wrapAsPrintHtml(body, title)
-
-  const iframe = document.createElement('iframe')
-  iframe.setAttribute('aria-hidden', 'true')
-  Object.assign(iframe.style, {
-    position: 'fixed',
-    right: '0',
-    bottom: '0',
-    width: '0',
-    height: '0',
-    border: '0',
-    visibility: 'hidden',
-  } as Partial<CSSStyleDeclaration>)
-
-  document.body.appendChild(iframe)
-  await new Promise<void>((resolve, reject) => {
-    iframe.onload = () => resolve()
-    iframe.onerror = () => reject(new Error('Print iframe failed to load'))
-    iframe.srcdoc = html
-  })
-
-  try {
-    iframe.contentWindow?.focus()
-    iframe.contentWindow?.print()
-  } finally {
-    // Give the print dialog a beat to take ownership of the iframe before removing it.
-    window.setTimeout(() => {
-      iframe.remove()
-    }, 1500)
+// Word-for-HTML export (Fix-Z). Point sizes and a Calibri/Consolas stack mirror
+// the default Word template so the imported document reads native. Word maps
+// these inline styles to its own paragraph/character formatting on open.
+const WORD_HTML_CSS = `
+  body {
+    font-family: Calibri, Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #000000;
+    margin: 0;
+    padding: 0;
   }
+  h1 { font-size: 16pt; color: #2E74B5; font-weight: bold; margin: 12pt 0 6pt; }
+  h2 { font-size: 13pt; color: #2E74B5; font-weight: bold; margin: 10pt 0 4pt; }
+  h3 { font-size: 12pt; color: #1F4E79; font-weight: bold; margin: 8pt 0 4pt; }
+  h4, h5, h6 { font-size: 11pt; font-weight: bold; margin: 6pt 0 3pt; }
+  p { margin: 0 0 8pt; }
+  code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 10pt;
+    background: #F2F2F2;
+    padding: 1pt 3pt;
+  }
+  pre {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 10pt;
+    background: #F2F2F2;
+    padding: 8pt;
+    margin: 6pt 0;
+    border-left: 3pt solid #CCCCCC;
+  }
+  pre code { background: transparent; padding: 0; }
+  blockquote {
+    border-left: 3pt solid #CCCCCC;
+    padding-left: 12pt;
+    margin: 6pt 0 6pt 12pt;
+    color: #555555;
+    font-style: italic;
+  }
+  ul, ol { margin: 4pt 0; padding-left: 24pt; }
+  li { margin: 2pt 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+  th {
+    background: #2E74B5;
+    color: white;
+    padding: 4pt 8pt;
+    border: 1pt solid #2E74B5;
+    font-weight: bold;
+  }
+  td { padding: 3pt 8pt; border: 1pt solid #CCCCCC; }
+  tr:nth-child(even) td { background: #F2F2F2; }
+  strong { font-weight: bold; }
+  em { font-style: italic; }
+  a { color: #2E74B5; }
+`
+
+// The Microsoft Office namespace declarations (xmlns:o / xmlns:w) plus the
+// ProgId meta tell Word this is a Word HTML document, which improves import
+// fidelity over a plain .html file saved with a .doc extension.
+export function wrapAsWordHtml(bodyHtml: string, title: string): string {
+  return `<!doctype html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8" />
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word">
+<title>${escapeHtml(title)}</title>
+<style>${WORD_HTML_CSS}</style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>
+`
 }
 
 function escapeHtml(s: string): string {
