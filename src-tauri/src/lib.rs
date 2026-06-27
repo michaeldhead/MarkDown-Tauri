@@ -566,14 +566,35 @@ async fn export_pdf_silent(
     Err("Silent PDF export is only supported on Windows (WebView2).".to_string())
 }
 
-// ----- Word (.docx) export (Fix-Z) -----
+// ----- Word (.docx) export (Fix-Z / Fix-Z2) -----
 //
 // Walks the markdown AST via pulldown-cmark and emits a real OOXML .docx via
 // docx-rs. Inline state (bold/italic/strike/code) is tracked as a stack of
 // flags; text runs accumulate into `current_runs` and flush into a styled
-// Paragraph at each block boundary. We lean on the built-in Word styles
-// (Heading1..6, Normal, ListParagraph, IntenseQuote) so the document inherits
-// the user's template fonts/colours rather than hard-coding them.
+// Paragraph at each block boundary.
+//
+// Headings use *direct run formatting* (explicit size/bold/colour) rather than
+// the built-in "Heading1..6" paragraph styles. docx-rs writes a `<w:pStyle>`
+// reference for `.style("Heading1")` but never emits the matching style
+// definition, so Word falls back to Normal appearance — headings rendered as
+// plain text. Direct formatting on each Run is self-contained and renders
+// correctly without a styles.xml entry. Body/list/quote paragraphs still use
+// the built-in styles, which Word does define out of the box.
+
+// Heading visual properties by level: (font size in half-points, hex colour
+// without `#`). Mirrors the Word default heading palette. docx-rs measures
+// font size in half-points, so 16pt = 32.
+fn heading_props(level: u8) -> (usize, &'static str) {
+    match level {
+        1 => (32, "2E74B5"), // 16pt, Word blue
+        2 => (26, "2E74B5"), // 13pt, Word blue
+        3 => (24, "1F4E79"), // 12pt, dark blue
+        4 => (22, "1F4E79"), // 11pt, dark blue
+        5 => (22, "404040"), // 11pt, dark gray
+        _ => (22, "595959"), // 11pt, medium gray
+    }
+}
+
 #[tauri::command]
 fn export_docx(path: String, content: String) -> Result<(), String> {
     use docx_rs::*;
@@ -611,17 +632,20 @@ fn export_docx(path: String, content: String) -> Result<(), String> {
             }
             Event::End(TagEnd::Heading(_)) => {
                 let level = current_heading_level.take().unwrap_or(1);
-                let style = match level {
-                    1 => "Heading1",
-                    2 => "Heading2",
-                    3 => "Heading3",
-                    4 => "Heading4",
-                    5 => "Heading5",
-                    _ => "Heading6",
-                };
-                let mut para = Paragraph::new().style(style);
+                let (half_pt_size, color_hex) = heading_props(level);
+
+                // Space before the heading so sections breathe. twips: 1 = 1/20pt,
+                // so 240 = 12pt (H1), 160 = 8pt (H2+).
+                let space_before = if level == 1 { 240 } else { 160 };
+                let mut para =
+                    Paragraph::new().line_spacing(LineSpacing::new().before(space_before));
+
+                // Re-style each accumulated run with the heading's size/colour and
+                // force bold. Re-styling (rather than tracking heading text in a
+                // separate String) preserves inline emphasis like *italic* inside a
+                // heading while still applying uniform heading formatting.
                 for run in current_runs.drain(..) {
-                    para = para.add_run(run);
+                    para = para.add_run(run.size(half_pt_size).bold().color(color_hex));
                 }
                 docx = docx.add_paragraph(para);
             }
@@ -816,7 +840,6 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &MenuItem::with_id(app, "export_html_styled", "HTML (Styled)", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_html_clean", "HTML (Clean)", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_docx", "Word Document (.docx)", true, None::<&str>)?,
-            &MenuItem::with_id(app, "export_word_html", "Word HTML (.doc)", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_text", "Plain Text", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_pdf", "PDF (Print to PDF)...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,

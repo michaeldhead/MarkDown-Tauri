@@ -8,7 +8,6 @@ type ExportDialogProps = {
   onExportHtmlStyled: () => void
   onExportHtmlClean: () => void
   onExportDocx: () => void
-  onExportWordHtml: () => void
   onExportPdf: () => void
   onExportText: () => void
   onCopyMarkdown: () => void
@@ -59,7 +58,6 @@ export default function ExportDialog({
   onExportHtmlStyled,
   onExportHtmlClean,
   onExportDocx,
-  onExportWordHtml,
   onExportPdf,
   onExportText,
   onCopyMarkdown,
@@ -152,12 +150,6 @@ export default function ExportDialog({
           label="Word Document"
           sublabel=".docx"
           onClick={run(onExportDocx)}
-        />
-        <Row
-          Icon={FileText}
-          label="Word (HTML)"
-          sublabel=".doc — best compatibility"
-          onClick={run(onExportWordHtml)}
         />
         <Row
           Icon={Download}

@@ -38,7 +38,6 @@ import {
   wrapAsCleanHtml,
   wrapAsPrintHtml,
   wrapAsStyledHtml,
-  wrapAsWordHtml,
 } from './lib/preview'
 import { DEFAULT_SNIPPETS, type Snippet } from './lib/snippets'
 
@@ -984,16 +983,6 @@ function MainWindowApp() {
     }
   }, [content, exportTitleBase])
 
-  const exportWordHtml = useCallback(async () => {
-    const body = await renderMarkdown(content)
-    const html = wrapAsWordHtml(body, exportTitleBase)
-    await saveExport(
-      `${exportTitleBase}.doc`,
-      [{ name: 'Word Document', extensions: ['doc'] }],
-      html,
-    )
-  }, [content, exportTitleBase, saveExport])
-
   const copyMarkdown = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content)
@@ -1112,7 +1101,6 @@ function MainWindowApp() {
     exportPlainText,
     exportPdf,
     exportDocx,
-    exportWordHtml,
     copyMarkdown,
     editorView,
     openCodeBlockPicker,
@@ -1129,7 +1117,6 @@ function MainWindowApp() {
     exportPlainText,
     exportPdf,
     exportDocx,
-    exportWordHtml,
     copyMarkdown,
     editorView,
     openCodeBlockPicker,
@@ -1181,9 +1168,6 @@ function MainWindowApp() {
           break
         case 'export_docx':
           void h.exportDocx()
-          break
-        case 'export_word_html':
-          void h.exportWordHtml()
           break
         case 'export_copy_md':
           void h.copyMarkdown()
@@ -1756,7 +1740,6 @@ function MainWindowApp() {
       { id: 'cmd-export-text', kind: 'command', label: 'Export Plain Text', detail: 'Export', action: () => void exportPlainText() },
       { id: 'cmd-export-pdf', kind: 'command', label: 'Export PDF', detail: 'Export', action: () => void exportPdf() },
       { id: 'cmd-export-docx', kind: 'command', label: 'Export Word (.docx)', detail: 'Export', action: () => void exportDocx() },
-      { id: 'cmd-export-word-html', kind: 'command', label: 'Export Word HTML (.doc)', detail: 'Export', action: () => void exportWordHtml() },
       { id: 'cmd-copy-md', kind: 'command', label: 'Copy Markdown', detail: 'Export', action: () => void copyMarkdown() },
     )
 
@@ -1813,7 +1796,6 @@ function MainWindowApp() {
     exportPlainText,
     exportPdf,
     exportDocx,
-    exportWordHtml,
     copyMarkdown,
     openFileByPath,
     openCodeBlockPicker,
@@ -2018,7 +2000,6 @@ function MainWindowApp() {
         onExportHtmlStyled={() => void exportHtmlStyled()}
         onExportHtmlClean={() => void exportHtmlClean()}
         onExportDocx={() => void exportDocx()}
-        onExportWordHtml={() => void exportWordHtml()}
         onExportPdf={() => void exportPdf()}
         onExportText={() => void exportPlainText()}
         onCopyMarkdown={() => void copyMarkdown()}
