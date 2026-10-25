@@ -50,6 +50,12 @@ every `agent-browser` call, so other jobs' reviewers never drive your browser.
 Don't sign in or submit forms. When you're done, run
 `agent-browser --session <job-id>-ui close` and stop the dev server.
 
+After stopping the dev server, confirm its process has exited before you
+write your review file: nothing should still be listening on your port
+(`netstat -ano | grep :<port>` prints no `LISTENING` line). On Windows, a
+running dev server keeps files under `node_modules` locked, and the gate's
+`npm ci` then fails. If it is still running, kill it by its PID and check again.
+
 ## What to look for
 
 - It looks like it belongs in the app: the same colours, type scale, spacing,

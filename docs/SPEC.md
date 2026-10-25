@@ -897,6 +897,18 @@ Added an Auto option to Settings > Theme that follows the Windows light/dark mod
 - Keep the stored preference separate from the resolved theme so downstream consumers never need to know about Auto.
 - `agent-browser set media` fires the same `change` event as a Windows mode switch, so live switching is verifiable in a plain browser.
 
+### Factory Tuning 2 (completed 2026-10-25)
+
+Job 003's (#9) merge-time gate failed: the UX reviewer's Vite dev server was still running in the worktree and kept files under `node_modules` locked, so `npm ci` in `checks.sh` failed. The builder rule from Factory Tuning 1 didn't cover the reviewers. No app code changed.
+
+**What changed and why:**
+- **`factory/bin/gate` frees the job's ports before running `checks.sh`** (marked `local patch, not upstream`). It computes the ports the orchestrator assigns (`ports.base + ports.step * n` for the builder, `+1` for reviewer-ux, `+2` for reviewer-ui, with `n` the job number), finds any process `LISTENING` on them in `netstat -ano`, and stops it with its children (`taskkill /PID <pid> /T /F`), printing `gate: freed port <port> ...` for each. Free ports are left alone. It only runs on Windows. `job merge` calls the gate, so the merge-time gate gets it too. The builder's stop hook (`gate --hook`) doesn't.
+- **UX and UI reviewers confirm the dev server has exited** (nothing listening on their port) after stopping it and before writing their review file. This is the same rule the builder has.
+
+**Lessons learned:**
+- Every agent that starts a dev server can leave a lock behind, not just the builder. Agent rules can be skipped, so the gate cleans up deterministically as well.
+- The `+1`/`+2` reviewer offsets live in the factory skill, not `config.json`. The gate hard-codes them, so the two must change together.
+
 ---
 
 ## Backlog
