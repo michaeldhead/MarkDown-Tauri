@@ -28,6 +28,7 @@ export function handleMockCommand(cmd: string, _args?: unknown): unknown {
     case 'open_dialog':
     case 'save_dialog':
     case 'write_file':
+    case 'write_file_bytes':
     case 'write_snapshot':
     case 'register_file_association':
     case 'show_editor_context_menu':

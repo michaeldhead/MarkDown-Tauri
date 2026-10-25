@@ -34,12 +34,13 @@ import {
 import type { PaletteItem } from './lib/palette'
 import { buildTopology, countWords, getActiveSectionIndex } from './lib/outline'
 import { slugFromPath, snapshotFilename } from './lib/timeline'
+import { renderMarkdown, wrapAsPrintHtml } from './lib/preview'
+import { basename, stripExt } from './lib/paths'
 import {
-  renderMarkdown,
-  wrapAsCleanHtml,
-  wrapAsPrintHtml,
-  wrapAsStyledHtml,
-} from './lib/preview'
+  exportHtmlClean as runExportHtmlClean,
+  exportHtmlStyled as runExportHtmlStyled,
+  exportPlainText as runExportPlainText,
+} from './lib/export/exporters'
 import { DEFAULT_SNIPPETS, type Snippet } from './lib/snippets'
 
 import {
@@ -62,8 +63,6 @@ import {
 } from './lib/scrollSync'
 
 type ViewMode = 'write' | 'split' | 'preview'
-
-type DialogFilter = { name: string; extensions: string[] }
 
 const DRAFT_DEBOUNCE_MS = 1000
 const STORE_FILE = 'settings.json'
@@ -90,16 +89,6 @@ const RECENT_FILES_MAX = 20
 // Auto-save interval in seconds. 0 = Off (no timer set).
 type AutoSaveInterval = 0 | 30 | 60 | 120 | 300
 const AUTOSAVE_VALID: readonly AutoSaveInterval[] = [0, 30, 60, 120, 300]
-
-function basename(path: string): string {
-  const parts = path.split(/[\\/]/)
-  return parts[parts.length - 1] || path
-}
-
-function stripExt(name: string): string {
-  const idx = name.lastIndexOf('.')
-  return idx > 0 ? name.slice(0, idx) : name
-}
 
 function joinPath(dir: string, file: string): string {
   if (!dir) return file
@@ -926,54 +915,34 @@ function MainWindowApp() {
   }, [addTab])
 
   // ----- Exports -----
-  const saveExport = useCallback(
-    async (defaultName: string, filters: DialogFilter[], body: string) => {
-      try {
-        const path = await invoke<string | null>('save_dialog', {
-          defaultName,
-          filters,
-        })
-        if (!path) return
-        await invoke('write_file', { path, content: body })
-      } catch (err) {
-        console.error('Export failed:', err)
-      }
-    },
-    [],
-  )
-
   const exportTitleBase = useMemo(
     () => (filePath ? stripExt(basename(filePath)) : 'untitled'),
     [filePath],
   )
 
   const exportHtmlStyled = useCallback(async () => {
-    const body = await renderMarkdown(content)
-    const html = wrapAsStyledHtml(body, exportTitleBase)
-    await saveExport(
-      `${exportTitleBase}.html`,
-      [{ name: 'HTML', extensions: ['html', 'htm'] }],
-      html,
-    )
-  }, [content, exportTitleBase, saveExport])
+    try {
+      await runExportHtmlStyled({ markdown: content, filePath })
+    } catch (err) {
+      console.error('Export failed:', err)
+    }
+  }, [content, filePath])
 
   const exportHtmlClean = useCallback(async () => {
-    const body = await renderMarkdown(content)
-    const html = wrapAsCleanHtml(body, exportTitleBase)
-    await saveExport(
-      `${exportTitleBase}.html`,
-      [{ name: 'HTML', extensions: ['html', 'htm'] }],
-      html,
-    )
-  }, [content, exportTitleBase, saveExport])
+    try {
+      await runExportHtmlClean({ markdown: content, filePath })
+    } catch (err) {
+      console.error('Export failed:', err)
+    }
+  }, [content, filePath])
 
   const exportPlainText = useCallback(async () => {
-    await saveExport(
-      `${exportTitleBase}.txt`,
-      [{ name: 'Text', extensions: ['txt'] }],
-      content,
-    )
-  }, [content, exportTitleBase, saveExport])
+    try {
+      await runExportPlainText({ markdown: content, filePath })
+    } catch (err) {
+      console.error('Export failed:', err)
+    }
+  }, [content, filePath])
 
   const exportPdf = useCallback(async () => {
     try {
