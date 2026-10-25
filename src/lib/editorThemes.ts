@@ -119,7 +119,7 @@ export const ghsDarkHighlight = HighlightStyle.define([
   { tag: tags.atom, color: '#79c0ff' },
   // Must stay last: processingInstruction is a subtag of meta and markers also carry
   // their parent's class (heading, emphasis...), so later rules win on colour.
-  { tag: tags.processingInstruction, color: '#6e7681' },
+  { tag: tags.processingInstruction, color: '#7d8590' },
 ])
 
 export const ghsDarkTheme: Extension = [
@@ -237,7 +237,7 @@ export const ghsInkHighlight = HighlightStyle.define([
   { tag: tags.atom, color: '#0550ae' },
   // Must stay last: processingInstruction is a subtag of meta and markers also carry
   // their parent's class (heading, emphasis...), so later rules win on colour.
-  { tag: tags.processingInstruction, color: '#8c959f' },
+  { tag: tags.processingInstruction, color: '#656d76' },
 ])
 
 export const ghsInkTheme: Extension = [
