@@ -1006,6 +1006,14 @@ Jobs 003–006 exposed two bugs in `factory/bin/job` and one reliability gap in 
 
 ---
 
+### Marker Contrast (completed 2026-10-25)
+
+**What was built:** Job 009 (#21) raised the contrast of the dimmed Markdown markers (`tags.processingInstruction`) in `src/lib/editorThemes.ts`. GHS Dark went from `#6e7681` to `#7d8590` (about 5.07:1 on the background, 4.64:1 on the active line). GHS Ink went from `#8c959f` to `#656d76` (about 5.25:1 and 4.81:1). Both clear 4.5:1 on each and stay at least 1.5x lower in contrast than body text. The `.cm-trailingSpace` dots keep `#6e7681` (Dark) and `#8c959f` (Ink). New test: `src/lib/editorThemes.contrast.test.ts`, with its own contrast helpers because `editorThemes.test.ts` is protected.
+
+**Lessons learned:** Measure against the active-line composite as well as the plain background, because it is the tighter bound.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |
