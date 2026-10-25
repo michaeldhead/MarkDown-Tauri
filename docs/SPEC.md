@@ -867,6 +867,21 @@ Issue #6: the preview pane showed list items with indent but no bullets or numbe
 **Lessons learned:**
 - Any element styled under `.preview-content` must restate the properties preflight resets, such as list styles.
 
+### Factory Tuning 1 (completed 2026-10-25)
+
+Tuning after the first two factory jobs (001 fenced code blocks, #4; 002 preview list markers, #6). No app code changed.
+
+**What changed and why:**
+- **`factory/checks.sh` retries `npm ci`** up to 3 times, 5 seconds apart, logging each failed attempt to stderr and exiting non-zero only if all 3 fail. On Windows `npm ci` fails on transient file locks under `node_modules` (job 002's first checks run failed this way). Nothing else in the script changed.
+- **Factory skill: the orchestrator never reruns a failed gate on its own.** A FAIL always follows the pipeline: back to the builder with the log, or to a human when rounds are exhausted. Rerunning a failed gate by hand hides real failures and skips the round count. Added under **gate** and **Guardrails**.
+- **Builder: confirm the dev server has exited** (nothing listening on its port) after stopping it and before running `checks.sh` or finishing. A running Vite server keeps files under `node_modules` locked, which is what broke `npm ci` in job 002.
+- **Spec writer: every acceptance criterion must be verifiable by a command or by `agent-browser` against the Vite dev server.** No manual-only criteria; what can't be verified that way goes under Assumptions. Job 001's spec had a "Manual (browser only)" criterion the builder skipped and marked not performed.
+- **UI and UX reviewers check the narrowest supported window width** (the main window's `minWidth` in `src-tauri/tauri.conf.json`, currently 900) instead of phone width. If no `minWidth` is set, they say so as a Note, not a finding. Job 002's UI review spent effort on a 390px layout the desktop app never supports.
+
+**Lessons learned:**
+- Agent prompts written for web apps need adjusting for a desktop-only Tauri app: phone widths and manual browser checks don't fit it.
+- On Windows, any process left running in a worktree can break the next `npm ci`. Agents must confirm their processes have exited, and the checks retry to absorb brief locks.
+
 ---
 
 ## Backlog

@@ -75,6 +75,11 @@ The approver escalates to a human when one of these is a product decision.
 - Use the repo's real validation commands from AGENTS.md (tests, build, lint)
   in the acceptance criteria, and include `bash <main checkout>/factory/checks.sh`
   run from the worktree. Ask for new tests only if the repo has a test runner.
+- Every acceptance criterion must be verifiable by a command or by
+  `agent-browser` against the Vite dev server (`npx vite --port <port>`). No
+  manual-only criteria. If something genuinely can't be verified that way
+  (native dialogs, menus, file I/O, the installed app), list it under
+  Assumptions instead.
 - Don't ask questions. Intake already settled what needed the author; decide
   the rest and record it under Assumptions.
 
