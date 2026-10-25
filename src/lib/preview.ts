@@ -8,6 +8,7 @@ import rehypeStringify from 'rehype-stringify'
 import { defaultSchema } from 'hast-util-sanitize'
 import { visit } from 'unist-util-visit'
 import type { Root } from 'mdast'
+import type { Element, Root as HastRoot } from 'hast'
 
 // Remark plugin: stamps block-level mdast nodes with a `data-source-line`
 // attribute carrying their 1-based source line. The preview pane uses this
@@ -17,9 +18,10 @@ import type { Root } from 'mdast'
 // exactly on the block at the editor's viewport top instead of guessing
 // from a scroll ratio.
 //
-// `code` mdast nodes (fenced code blocks) become `<pre><code>` in HTML;
-// `data-source-line` ends up on the outer `<pre>` because that's where
-// mdast-util-to-hast applies hProperties for the code handler.
+// `code` mdast nodes (fenced code blocks) become `<pre><code>` in HTML, but
+// mdast-util-to-hast applies hProperties to the inner `<code>`. The
+// `rehypeLiftCodeSourceLine` plugin below lifts the attribute to `<pre>`
+// before sanitizing.
 //
 // `list` mdast nodes become `<ul>` or `<ol>` based on the `ordered` flag;
 // the schema below allow-lists both.
@@ -40,6 +42,22 @@ const remarkSourceLines: Plugin<[], Root> = () => (tree) => {
     const data = (node.data ??= {})
     const hProperties = ((data as { hProperties?: Record<string, unknown> }).hProperties ??= {})
     hProperties['data-source-line'] = line
+  })
+}
+
+// Rehype plugin: moves `data-source-line` from the inner `<code>` to its
+// parent `<pre>`. The sanitize schema strips the attribute from `<code>`, so
+// without this fenced code blocks would have no scroll-sync anchor.
+const rehypeLiftCodeSourceLine: Plugin<[], HastRoot> = () => (tree) => {
+  visit(tree, 'element', (node) => {
+    if (node.tagName !== 'pre') return
+    const code = node.children.find(
+      (child): child is Element => child.type === 'element' && child.tagName === 'code',
+    )
+    const line = code?.properties?.['data-source-line']
+    if (code == null || line == null) return
+    node.properties['data-source-line'] = line
+    delete code.properties['data-source-line']
   })
 }
 
@@ -75,6 +93,7 @@ const processor = unified()
   .use(remarkGfm)
   .use(remarkSourceLines)
   .use(remarkRehype)
+  .use(rehypeLiftCodeSourceLine)
   .use(rehypeHighlight, { detect: true, ignoreMissing: true })
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeStringify)

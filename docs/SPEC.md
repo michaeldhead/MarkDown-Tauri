@@ -809,6 +809,8 @@ _Key technical notes:_
 
 _Known limitations:_ List anchors at `<ul>`/`<ol>` level only (not `<li>`). Tables not tagged. Detached preview window (Fix-J) not synced. Sparse-anchor documents (heading-only) may show visible "stepping" rather than gliding.
 
+_Correction (Issue #4):_ The earlier note above that the `code` mdast node maps to `<pre>` hast was wrong. mdast-util-to-hast applies hProperties to the inner `<code>` element, where the sanitize schema (`code: ['className']`) stripped `data-source-line`, so fenced code blocks had no scroll-sync anchor. A rehype step in `preview.ts` (`rehypeLiftCodeSourceLine`, between `remarkRehype` and `rehypeSanitize`) now lifts the attribute to `<pre>` before sanitizing. The sanitize schema was not widened.
+
 ### Fix-L — .md File Association, Per-User, No Admin (completed 2026-05-01)
 On first launch, native `ask()` dialog prompts to register as default `.md` app. Writes four `HKCU\Software\Classes` keys via `reg.exe` (no admin required). `check_file_association` checks current state; if already registered (e.g. via MSI), prompt is silently suppressed. `fileAssocPromptShown` key in `settings.json` prevents repeat prompting. Settings panel "File Association" section with "Register for .md files" button for manual re-registration. `run_reg_add` Rust helper extracted to avoid four near-identical command blocks.
 
