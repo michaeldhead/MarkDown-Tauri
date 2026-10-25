@@ -15,10 +15,13 @@ GHS Markdown Editor: a Windows desktop Markdown editor built with Tauri 2, React
 - **Setup (fresh checkout):** `npm ci`
 - **Dev server:** `npm run tauri dev`
   - The Vite frontend on its own (`http://localhost:1420`) loads in a browser, but Tauri `invoke()` calls fail there because there is no native backend. File dialogs, export, menus, and file I/O can't be exercised in a plain browser.
+  - **On a given port** (browser only, for factory agents): `npx vite --port <port>`. The config sets `strictPort`, so it fails instead of drifting if the port is taken. `npm run tauri dev` always uses 1420, so only one can run at a time.
 - **Validation** (these will become `factory/checks.sh`):
   - `npm test`: Vitest, node environment; tests live next to their sources as `src/**/*.test.ts`
   - `npx tsc --noEmit`
+  - `npm run build`: `tsc --noEmit && vite build`, producing the `dist/` that Tauri embeds
   - `cargo check --manifest-path src-tauri/Cargo.toml`
+  - `factory/checks.sh` runs `npm ci` and then all of the above.
 - **Release build:** `npm run tauri build`. It is slow; use it for releases, not routine validation.
 
 ## Environment
@@ -47,3 +50,11 @@ Details for each are in `docs/SPEC.md`.
 - `settingsLoaded` is a ref, so it can't be a `useEffect` dependency.
 - For event listeners that must not drop events, use empty deps plus a ref to the latest values.
 - Wrap async Tauri setup in `try/catch` with `console.error`. Rejections are otherwise swallowed.
+
+## Software factory
+
+`/factory run` builds every open GitHub issue labeled `factory` through
+intake → spec → build → gate → review → approve, one PR per issue. State is in
+`factory/jobs/` (gitignored); `factory/bin/job` is its only writer. Checks:
+`factory/checks.sh`. Dashboard: `cd factory; python -m http.server`, then
+open http://localhost:8000/dashboard.html.
