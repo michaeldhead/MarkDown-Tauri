@@ -48,7 +48,9 @@ import {
   DEFAULT_FONT_SIZE,
   FONT_SIZE_MAX,
   FONT_SIZE_MIN,
-  type Theme,
+  type ThemePreference,
+  isThemePreference,
+  resolveTheme,
 } from './lib/theme'
 import {
   getEditorTopSourceLine,
@@ -184,7 +186,11 @@ function MainWindowApp() {
     [updateActiveTab],
   )
   const [editorView, setEditorView] = useState<EditorView | null>(null)
-  const [theme, setTheme] = useState<Theme>('dark')
+  const [theme, setTheme] = useState<ThemePreference>('dark')
+  const [osPrefersDark, setOsPrefersDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches,
+  )
+  const resolvedTheme = resolveTheme(theme, osPrefersDark)
   const [defaultViewMode, setDefaultViewMode] = useState<ViewMode>('split')
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
   const [activePanel, setActivePanel] = useState<PanelId>('outline')
@@ -244,7 +250,7 @@ function MainWindowApp() {
 
         const ratio = await store.get<number>(STORE_KEY_SPLIT_RATIO)
         const dvm = await store.get<ViewMode>(STORE_KEY_DEFAULT_VIEW_MODE)
-        const storedTheme = await store.get<Theme>(STORE_KEY_THEME)
+        const storedTheme = await store.get<ThemePreference>(STORE_KEY_THEME)
         const sbOpen = await store.get<boolean>(STORE_KEY_SIDEBAR_OPEN)
         const ap = await store.get<PanelId>(STORE_KEY_ACTIVE_PANEL)
         const rf = await store.get<string[]>(STORE_KEY_RECENT_FILES)
@@ -288,9 +294,12 @@ function MainWindowApp() {
         if (typeof storedFontFamily === 'string' && storedFontFamily.length > 0) {
           setEditorFontFamily(storedFontFamily)
         }
-        if (storedTheme === 'dark' || storedTheme === 'ink') {
+        if (isThemePreference(storedTheme)) {
           setTheme(storedTheme)
-          applyTheme(storedTheme, resolvedAccent)
+          applyTheme(
+            resolveTheme(storedTheme, window.matchMedia('(prefers-color-scheme: dark)').matches),
+            resolvedAccent,
+          )
         } else {
           // No stored theme; apply the default theme with the resolved
           // accent so the accent variable lands on first paint.
@@ -471,7 +480,7 @@ function MainWindowApp() {
   // commit), avoiding a one-frame flash of the wrong accent when only the
   // theme changes.
   useEffect(() => {
-    applyTheme(theme, accentColor)
+    applyTheme(resolvedTheme, accentColor)
     if (!settingsLoaded.current || !settingsStore.current) return
     const store = settingsStore.current
     void (async () => {
@@ -483,7 +492,17 @@ function MainWindowApp() {
         console.warn('Failed to persist theme/accent:', err)
       }
     })()
-  }, [theme, accentColor])
+  }, [theme, resolvedTheme, accentColor])
+
+  // Track the OS light/dark mode while the preference is Auto.
+  useEffect(() => {
+    if (theme !== 'auto') return
+    const mql = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e: MediaQueryListEvent) => setOsPrefersDark(e.matches)
+    setOsPrefersDark(mql.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [theme])
 
   // ----- Editor font (size + family) persistence -----
   useEffect(() => {
@@ -1602,11 +1621,11 @@ function MainWindowApp() {
     void emit('preview-content-update', {
       content,
       filePath,
-      theme,
+      theme: resolvedTheme,
       accentColor,
       topLine,
     })
-  }, [previewDetached, content, filePath, theme, accentColor, editorView])
+  }, [previewDetached, content, filePath, resolvedTheme, accentColor, editorView])
 
   // Update the preview window's title bar when the active tab's filename
   // changes (covers Save As and tab switches).
@@ -1629,7 +1648,7 @@ function MainWindowApp() {
   const previewSnapshotRef = useRef({
     content,
     filePath,
-    theme,
+    theme: resolvedTheme,
     accentColor,
     topLine: 0,
   })
@@ -1638,11 +1657,11 @@ function MainWindowApp() {
     previewSnapshotRef.current = {
       content,
       filePath,
-      theme,
+      theme: resolvedTheme,
       accentColor,
       topLine: view ? getEditorTopSourceLine(view) : 0,
     }
-  }, [content, filePath, theme, accentColor, editorView])
+  }, [content, filePath, resolvedTheme, accentColor, editorView])
   useEffect(() => {
     const promise = listen('preview-window-ready', () => {
       void emit('preview-content-update', previewSnapshotRef.current)
@@ -1824,7 +1843,7 @@ function MainWindowApp() {
         onScroll={handleEditorScroll}
         onOpenLangPicker={openLangPicker}
         onContextMenu={handleEditorContextMenu}
-        theme={theme}
+        theme={resolvedTheme}
         wordWrap={wordWrap}
         showLineNumbers={showLineNumbers}
         fontSize={editorFontSize}
@@ -1839,7 +1858,7 @@ function MainWindowApp() {
       handleEditorScroll,
       openLangPicker,
       handleEditorContextMenu,
-      theme,
+      resolvedTheme,
       wordWrap,
       showLineNumbers,
       editorFontSize,
