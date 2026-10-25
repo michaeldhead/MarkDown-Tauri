@@ -56,6 +56,11 @@ const ghsDarkBase = EditorView.theme(
       backgroundColor: '#2d3f50',
       outline: '1px solid #58a6ff',
     },
+    '.cm-trailingSpace': {
+      backgroundImage: 'radial-gradient(circle, #6e7681 1.5px, transparent 2px)',
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+    },
     '.cm-tooltip': {
       backgroundColor: '#21262d',
       border: '1px solid #30363d',
@@ -167,6 +172,11 @@ const ghsInkBase = EditorView.theme(
     '.cm-searchMatch': {
       backgroundColor: '#fff8c5',
       outline: '1px solid #d4a72c',
+    },
+    '.cm-trailingSpace': {
+      backgroundImage: 'radial-gradient(circle, #8c959f 1.5px, transparent 2px)',
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
     },
     '.cm-tooltip': {
       backgroundColor: '#ffffff',

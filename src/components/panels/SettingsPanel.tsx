@@ -25,6 +25,8 @@ type SettingsPanelProps = {
   onEditorFontFamilyChange: (family: string) => void
   editorTabSize: number
   onEditorTabSizeChange: (size: number) => void
+  showTrailingSpaces: boolean
+  onShowTrailingSpacesChange: (v: boolean) => void
 }
 
 const sectionLabelStyle: React.CSSProperties = {
@@ -91,6 +93,8 @@ export default function SettingsPanel({
   onEditorFontFamilyChange,
   editorTabSize,
   onEditorTabSizeChange,
+  showTrailingSpaces,
+  onShowTrailingSpacesChange,
 }: SettingsPanelProps) {
   const autoSaveLabel =
     AUTOSAVE_OPTIONS.find((o) => o.value === autoSaveInterval)?.label ?? 'Off'
@@ -200,6 +204,24 @@ export default function SettingsPanel({
             {value}
           </button>
         ))}
+      </div>
+
+      <div style={{ ...sectionLabelStyle, marginTop: 20 }}>Trailing Spaces</div>
+      <div style={groupStyle}>
+        <button
+          type="button"
+          onClick={() => onShowTrailingSpacesChange(true)}
+          style={btnStyle(showTrailingSpaces)}
+        >
+          On
+        </button>
+        <button
+          type="button"
+          onClick={() => onShowTrailingSpacesChange(false)}
+          style={btnStyle(!showTrailingSpaces)}
+        >
+          Off
+        </button>
       </div>
 
       <div style={{ ...sectionLabelStyle, marginTop: 20 }}>Default View Mode</div>

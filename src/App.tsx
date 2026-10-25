@@ -78,6 +78,7 @@ const STORE_KEY_ACTIVE_FILE = 'activeFilePath'
 const STORE_KEY_FILE_ASSOC_PROMPT_SHOWN = 'fileAssocPromptShown'
 const STORE_KEY_WORD_WRAP = 'wordWrap'
 const STORE_KEY_SHOW_LINE_NUMBERS = 'showLineNumbers'
+const STORE_KEY_SHOW_TRAILING_SPACES = 'showTrailingSpaces'
 const STORE_KEY_AUTOSAVE = 'autoSaveInterval'
 const STORE_KEY_ACCENT_COLOR = 'accentColor'
 const STORE_KEY_FONT_SIZE = 'editorFontSize'
@@ -209,6 +210,7 @@ function MainWindowApp() {
   const [previewDetached, setPreviewDetached] = useState<boolean>(false)
   const [wordWrap, setWordWrap] = useState<boolean>(true)
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(true)
+  const [showTrailingSpaces, setShowTrailingSpaces] = useState<boolean>(true)
   const [autoSaveInterval, setAutoSaveInterval] = useState<AutoSaveInterval>(0)
   const [accentColor, setAccentColor] = useState<string>(DEFAULT_ACCENT)
   const [editorFontSize, setEditorFontSize] = useState<number>(DEFAULT_FONT_SIZE)
@@ -261,6 +263,7 @@ function MainWindowApp() {
         const stored = await store.get<Snippet[]>(STORE_KEY_SNIPPETS)
         const storedWordWrap = await store.get<boolean>(STORE_KEY_WORD_WRAP)
         const storedLineNumbers = await store.get<boolean>(STORE_KEY_SHOW_LINE_NUMBERS)
+        const storedTrailingSpaces = await store.get<boolean>(STORE_KEY_SHOW_TRAILING_SPACES)
         const storedAutoSave = await store.get<number>(STORE_KEY_AUTOSAVE)
         const storedAccent = await store.get<string>(STORE_KEY_ACCENT_COLOR)
         const storedFontSize = await store.get<number>(STORE_KEY_FONT_SIZE)
@@ -270,6 +273,7 @@ function MainWindowApp() {
         if (!mounted) return
         if (typeof storedWordWrap === 'boolean') setWordWrap(storedWordWrap)
         if (typeof storedLineNumbers === 'boolean') setShowLineNumbers(storedLineNumbers)
+        if (typeof storedTrailingSpaces === 'boolean') setShowTrailingSpaces(storedTrailingSpaces)
         if (
           typeof storedAutoSave === 'number' &&
           (AUTOSAVE_VALID as readonly number[]).includes(storedAutoSave)
@@ -563,12 +567,13 @@ function MainWindowApp() {
       try {
         await store.set(STORE_KEY_WORD_WRAP, wordWrap)
         await store.set(STORE_KEY_SHOW_LINE_NUMBERS, showLineNumbers)
+        await store.set(STORE_KEY_SHOW_TRAILING_SPACES, showTrailingSpaces)
         await store.save()
       } catch (err) {
         console.warn('Failed to persist editor toggles:', err)
       }
     })()
-  }, [wordWrap, showLineNumbers])
+  }, [wordWrap, showLineNumbers, showTrailingSpaces])
 
   // ----- Auto-save interval persistence -----
   useEffect(() => {
@@ -1856,6 +1861,7 @@ function MainWindowApp() {
         fontSize={editorFontSize}
         fontFamily={editorFontFamily}
         tabSize={editorTabSize}
+        showTrailingSpaces={showTrailingSpaces}
       />
     ),
     [
@@ -1872,6 +1878,7 @@ function MainWindowApp() {
       editorFontSize,
       editorFontFamily,
       editorTabSize,
+      showTrailingSpaces,
     ],
   )
 
@@ -1965,6 +1972,8 @@ function MainWindowApp() {
           editorFontFamily={editorFontFamily}
           onEditorFontFamilyChange={setEditorFontFamily}
           editorTabSize={editorTabSize}
+          showTrailingSpaces={showTrailingSpaces}
+          onShowTrailingSpacesChange={setShowTrailingSpaces}
           onEditorTabSizeChange={setEditorTabSize}
         />
         <div
