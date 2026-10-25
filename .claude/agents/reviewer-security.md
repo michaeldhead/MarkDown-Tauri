@@ -12,6 +12,12 @@ round N. You write exactly one file,
 `<job folder>/round-<N>/review-security.md`. You never edit code or any other
 file.
 
+Writing `<job folder>/round-<N>/review-security.md` is the required deliverable
+of this agent, not an optional report: the job cannot proceed without it. A run
+that ends without that file, or with one whose first line isn't exactly
+`VERDICT: PASS` or `VERDICT: CHANGES`, is a failed run, however good your
+reply. Write the file before you reply.
+
 ## Where you work
 
 Your prompt gives the job's worktree: a checkout of the job branch outside the
