@@ -838,6 +838,19 @@ _Critical architectural lessons (apply to all future multi-window Tauri work):_
 - **Belt-and-braces:** 300ms backup emit after `tauri://created` covers slow React mounts in the secondary window.
 Replaced `oneDark` import with custom `ghsDarkTheme` and `ghsInkTheme` extensions in `src/lib/editorThemes.ts`. Editor now matches preview token-for-token: gold H1, teal H2/H3, pink-red inline code, coral keywords, light-blue strings, purple functions, orange classes. Theme extension in `extensions` array (not `theme` prop) with `theme` in `useMemo` deps — swaps instantly with Settings toggle alongside preview. `@lezer/highlight` was already available as transitive dep. `tags.code` does not exist in lezer 1.2.3 — `tags.monospace` used instead for inline code.
 
+### Software Factory Install (completed 2026-10-25)
+Installed the zazencodes software factory v2 (`/factory run`: GitHub issues labeled `factory` → intake → spec → build → gate → review → approve, one PR per issue). Files: `.claude/skills/factory/SKILL.md`, eight agents in `.claude/agents/`, `factory/{config.json,checks.sh,dashboard.html}`, `factory/bin/{job,gate,route}`. `factory/jobs/` is gitignored runtime state. Config: `concurrency` 1, `merge_method` squash, `src/*.test.ts` protected (the gate fails any branch that modifies or deletes an existing test; new tests are fine). `checks.sh` = `npm ci`, `npm test`, `npx tsc --noEmit`, `npm run build`, `cargo check`, with a shared `CARGO_TARGET_DIR` under `~/.cache` across job worktrees. No app code changed.
+
+**Deviations from upstream:**
+- **Skill and agents are reconstructed.** Upstream's root `.gitignore` ignores `.claude` with no exception for v2, so the published v2 skill and agents don't exist (404). They were rebuilt from the published v1 skill and agents plus v2's `BUILD_PROMPT.md`, `DESIGN.md` and example jobs, against the published v2 scripts. Each file carries a `Reconstructed from v1 + BUILD_PROMPT.md…` comment so they can be diffed if upstream publishes the originals.
+- **Windows patches to `factory/bin/job` and `factory/bin/route`**, each marked `local patch, not upstream`: (1) `fcntl` is POSIX-only, so the job lock falls back to `msvcrt.locking`, retried until acquired, because `LK_LOCK` gives up after ~10s while `flock` waits; (2) the scripts call each other via `[sys.executable, path]`, because Windows can't exec a shebang script ([WinError 2]); (3) the cost meter compares `Job folder:` paths with forward slashes on both sides.
+- **`PYTHONUTF8=1`** in `.claude/settings.json` `env`. Python 3.14 on Windows defaults to cp1252 for file I/O, and Claude Code transcripts contain non-cp1252 UTF-8, which would crash every `job sync`/`advance`. Manual runs outside Claude Code need `$env:PYTHONUTF8 = "1"`.
+
+**Lessons learned:**
+- Python factory scripts written for macOS/Linux break on Windows in three quiet ways: `fcntl`, shebang exec from `subprocess`, and locale-default encoding. Check all three before trusting a POSIX tool here.
+- The builder's stop hook goes in the frontmatter under `Stop`; Claude Code converts it to `SubagentStop` when the agent runs as a subagent.
+- Browser review uses `npx vite --port <port>` (CLI overrides the 1420 config port, and `strictPort` still applies). `npm run tauri dev` is pinned to 1420, which is another reason to keep `concurrency` at 1.
+
 ---
 
 ## Backlog
