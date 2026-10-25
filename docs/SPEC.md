@@ -953,6 +953,19 @@ Job 007 (#13) adds a distraction-free Focus Mode toggled with Ctrl+Shift+F.
 - CodeMirror's search keymap (`Mod-f`) also matches Ctrl+Shift+F and opens the search panel, contrary to first assumption. `Editor` adds a highest-precedence `keydown` DOM handler that claims the combo so App's toggle is the only effect.
 - The CodeMirror search panel closes on Escape through its keymap, so App checks for `.cm-panels` in the target rather than relying on ordering.
 
+### Factory Tuning 3a (completed 2026-10-25)
+
+Two problems held up job 006. Its gate was refused because `cargo check` in `checks.sh` regenerated the tracked files under `src-tauri/gen/schemas/`, so the worktree was dirty afterwards. Its merge then conflicted on `docs/SPEC.md`, because every job appends an entry at the same place. No app code changed.
+
+**What changed and why:**
+- **Generated schemas are untracked.** `src-tauri/gen/schemas/` is in `.gitignore` and was removed from the index with `git rm -r --cached`. Tauri's build script writes `acl-manifests.json`, `capabilities.json`, `desktop-schema.json` and `windows-schema.json` on every build or check. Deleting them and rerunning `cargo check` (after touching `build.rs`) rebuilt all four byte-identical. The `"$schema": "../gen/schemas/desktop-schema.json"` lines in `src-tauri/capabilities/*.json` are only editor hints and the build never reads them, so a fresh checkout without the files builds fine.
+- **`docs/SPEC.md` merges with `merge=union`** (in `.gitattributes`). When two branches both add lines in the same place, Git keeps both sides' lines instead of reporting a conflict, so parallel job entries merge cleanly.
+
+**Lessons learned:**
+- Anything a check step regenerates must not be tracked, or the gate's clean-tree check fails depending on whether the build cache happened to be warm.
+- A cached `cargo check` skips the build script, so to prove the schemas regenerate you have to force it to rerun (touch `build.rs`).
+- Union merge doesn't understand structure. It only works because SPEC.md is append-only. Two branches editing the same existing line would both survive without a conflict marker, so SPEC.md still needs a quick read after a merge.
+
 ---
 
 ## Backlog
