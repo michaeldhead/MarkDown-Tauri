@@ -123,4 +123,14 @@ describe('buildPdfDocument', () => {
     expect(t).toContain('☑')
     expect(t).toContain('☐')
   })
+
+  it('renders heading runs bold', () => {
+    const tree = buildPdfDocument('# One\n\n## Two *em*\n', 'T', components)
+    const fams = all(tree)
+      .filter((e) => e.type === components.Text)
+      .map((e) => (e.props as { style?: { fontFamily?: string } }).style?.fontFamily)
+    expect(fams).toContain('Helvetica-BoldOblique')
+    expect(fams.filter((f) => f === 'Helvetica-Bold')).toHaveLength(4)
+    expect(fams).not.toContain('Helvetica')
+  })
 })

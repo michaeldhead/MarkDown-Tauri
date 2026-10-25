@@ -289,14 +289,15 @@ function block(node: Nodes, env: Env, ctx: Ctx, key: string): ReactElement[] {
     case 'paragraph':
       return [textBlock(env, node.children, ctx, PARAGRAPH, key)]
     case 'heading': {
+      const hctx = { ...ctx, bold: true }
       const style = HEADINGS[Math.min(node.depth, 4) - 1]
-      if (node.depth !== 1) return [textBlock(env, node.children, ctx, style, key)]
+      if (node.depth !== 1) return [textBlock(env, node.children, hctx, style, key)]
       return [
         <View key={key} style={H1_RULE}>
           {textBlock(
             env,
             node.children,
-            ctx,
+            hctx,
             { ...style, marginBottom: 0 },
             `${key}-h`,
           )}
