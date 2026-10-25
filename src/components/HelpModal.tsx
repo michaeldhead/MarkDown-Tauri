@@ -22,6 +22,7 @@ const EDITING_SHORTCUTS: Shortcut[] = [
   { keys: 'Ctrl+Shift+K', label: 'Code Block (with language picker)' },
   { keys: 'Ctrl+K', label: 'Command Palette' },
   { keys: 'Ctrl+Shift+E', label: 'Export Dialog' },
+  { keys: 'Ctrl+Shift+F', label: 'Focus Mode' },
   { keys: 'F1', label: 'This help screen' },
 ]
 

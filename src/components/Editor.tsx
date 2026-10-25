@@ -5,7 +5,7 @@ import CodeMirror, {
 } from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { indentUnit } from '@codemirror/language'
-import { EditorState } from '@codemirror/state'
+import { EditorState, Prec } from '@codemirror/state'
 import { useMemo, type MouseEvent as ReactMouseEvent } from 'react'
 import { getCodeBlockLanguageAtPos } from '../lib/editorCommands'
 import { ghsDarkTheme, ghsInkTheme } from '../lib/editorThemes'
@@ -55,6 +55,16 @@ export default function Editor({
     if (showTrailingSpaces) {
       base.push(trailingSpaceMarkers())
     }
+
+    // Ctrl+Shift+F is App's Focus Mode toggle; CM's search keymap would
+    // otherwise also match it (Mod-f) and open the search panel.
+    base.push(
+      Prec.highest(
+        EditorView.domEventHandlers({
+          keydown: (e) => (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f',
+        }),
+      ),
+    )
     base.push(EditorState.tabSize.of(tabSize), indentUnit.of(' '.repeat(tabSize)))
     if (onScroll) {
       base.push(

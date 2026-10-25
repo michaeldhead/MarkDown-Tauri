@@ -952,6 +952,35 @@ Job 006 (#12) shows trailing spaces as faint dots and adds a hard line break too
 - One mark per space (not one per run) keeps the dot centred in each space, which matters for proportional editor fonts where a space is not `1ch`.
 - `insertHardLineBreak` needs a live `EditorView`, so it is verified in the browser rather than in node Vitest.
 
+### Focus Mode (completed 2026-10-25)
+
+Job 007 (#13) adds a distraction-free Focus Mode toggled with Ctrl+Shift+F.
+
+**What was built:**
+- **Toggle:** a `focusMode` boolean in `App`, flipped by Ctrl+Shift+F (placed after the modal guard, so it does nothing while a modal is open) and by the `cmd-toggle-focus-mode` palette command. It is also listed in the Help shortcuts.
+- **Hidden and kept:** `Toolbar`, `TabBar`, `Sidebar` and `StatusBar` are not rendered while it is on, using in-place `{!focusMode && ...}` so `Editor`, `PreviewPane` and `SmartGutter` are never remounted. The CodeMirror instance, undo history, cursor and scroll positions survive. `viewMode`, `splitRatio`, `sidebarOpen` and `activePanel` are untouched, so the sidebar returns as it was. The existing flex layout makes the split container fill the window.
+- **Session-only:** the state is never written to the settings store or `localStorage`; each launch starts with it off.
+- **Exit button:** a fixed 28px `Minimize2` button at the top right (`zIndex` 900, below the 1000 modals), coloured only with theme variables.
+- **Escape:** exits Focus Mode only when it is on, no modal flag (`paletteOpen`, `langPickerOpen`, `exportOpen`, `aboutOpen`, `helpOpen`) is set, `e.defaultPrevented` is false, and the target is not inside `.cm-panels`.
+
+**Lessons learned:**
+- `ExportDialog`, `AboutModal` and `HelpModal` add their `window` keydown listeners only while open, so they run after App's listener. `defaultPrevented` is still false when App sees the event, so App must check the modal flags itself.
+- CodeMirror's search keymap (`Mod-f`) also matches Ctrl+Shift+F and opens the search panel, contrary to first assumption. `Editor` adds a highest-precedence `keydown` DOM handler that claims the combo so App's toggle is the only effect.
+- The CodeMirror search panel closes on Escape through its keymap, so App checks for `.cm-panels` in the target rather than relying on ordering.
+
+### Factory Tuning 3a (completed 2026-10-25)
+
+Two problems held up job 006. Its gate was refused because `cargo check` in `checks.sh` regenerated the tracked files under `src-tauri/gen/schemas/`, so the worktree was dirty afterwards. Its merge then conflicted on `docs/SPEC.md`, because every job appends an entry at the same place. No app code changed.
+
+**What changed and why:**
+- **Generated schemas are untracked.** `src-tauri/gen/schemas/` is in `.gitignore` and was removed from the index with `git rm -r --cached`. Tauri's build script writes `acl-manifests.json`, `capabilities.json`, `desktop-schema.json` and `windows-schema.json` on every build or check. Deleting them and rerunning `cargo check` (after touching `build.rs`) rebuilt all four byte-identical. The `"$schema": "../gen/schemas/desktop-schema.json"` lines in `src-tauri/capabilities/*.json` are only editor hints and the build never reads them, so a fresh checkout without the files builds fine.
+- **`docs/SPEC.md` merges with `merge=union`** (in `.gitattributes`). When two branches both add lines in the same place, Git keeps both sides' lines instead of reporting a conflict, so parallel job entries merge cleanly.
+
+**Lessons learned:**
+- Anything a check step regenerates must not be tracked, or the gate's clean-tree check fails depending on whether the build cache happened to be warm.
+- A cached `cargo check` skips the build script, so to prove the schemas regenerate you have to force it to rerun (touch `build.rs`).
+- Union merge doesn't understand structure. It only works because SPEC.md is append-only. Two branches editing the same existing line would both survive without a conflict marker, so SPEC.md still needs a quick read after a merge.
+
 ---
 
 ## Backlog
