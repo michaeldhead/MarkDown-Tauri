@@ -41,6 +41,12 @@ reviewers never drive your browser. Don't sign in or submit forms: the dev
 server may talk to real services. When you're done, run
 `agent-browser --session <job-id>-ux close` and stop the dev server.
 
+After stopping the dev server, confirm its process has exited before you
+write your review file: nothing should still be listening on your port
+(`netstat -ano | grep :<port>` prints no `LISTENING` line). On Windows, a
+running dev server keeps files under `node_modules` locked, and the gate's
+`npm ci` then fails. If it is still running, kill it by its PID and check again.
+
 In this project the dev server is Vite in a plain browser, with no native
 backend, so Tauri `invoke()` calls fail: file dialogs, export, menus and file
 I/O can't be exercised. Don't report those failures as UX defects; review
