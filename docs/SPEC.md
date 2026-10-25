@@ -998,6 +998,12 @@ Jobs 003–006 exposed two bugs in `factory/bin/job` and one reliability gap in 
 - Don't capture the output of `agent-browser` calls that may start its daemon. The daemon inherits the pipes and `subprocess.run` never returns. `remove_worktree` sends its streams to `DEVNULL` with a timeout.
 - A file left by an earlier pass through a stage gets read as this pass's result. Every stage file that can be rewritten in a later round needs archiving when the job loops back.
 
+### Browser Test Harness (completed 2026-10-25)
+
+**What was built:** `src/dev/tauriBrowserMocks.ts` fakes the Tauri backend so the Vite dev server renders and edits in a plain browser. It uses `mockWindows('main')` and `mockIPC(handleMockCommand, { shouldMockEvents: true })` from `@tauri-apps/api/mocks`. `src/main.tsx` now renders from an async `bootstrap()` that dynamically imports the harness inside `if (import.meta.env.DEV)`, in a `try/catch`. The harness is skipped when `window.__TAURI_INTERNALS__` exists, so `npm run tauri dev` is unaffected. Production exclusion is verified by `npm run build` followed by `grep -rl ghs-tauri-browser-harness dist/` and `grep -rl mockIPC dist/` printing nothing. Unit tests are in `src/dev/tauriBrowserMocks.test.ts`. One deviation: added `src/vite-env.d.ts` (`vite/client` types) because `import.meta.env` was untyped.
+
+**Lessons learned:** `plugin:store|get` must return a `[value, exists]` tuple (`[null, false]`); a bare `null` throws in the plugin. `check_file_association` must return `true`, or the app takes the native `ask()` dialog path on every load because the mock store is empty. The marker string is a fixed literal because export names like `mockIPC` can be mangled by minification.
+
 ---
 
 ## Backlog

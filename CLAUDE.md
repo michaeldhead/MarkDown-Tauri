@@ -14,7 +14,7 @@ GHS Markdown Editor: a Windows desktop Markdown editor built with Tauri 2, React
 
 - **Setup (fresh checkout):** `npm ci`
 - **Dev server:** `npm run tauri dev`
-  - The Vite frontend on its own (`http://localhost:1420`) loads in a browser, but Tauri `invoke()` calls fail there because there is no native backend. File dialogs, export, menus, and file I/O can't be exercised in a plain browser.
+  - In a plain browser (`http://localhost:1420`), `src/dev/tauriBrowserMocks.ts` is installed by `src/main.tsx` only in Vite dev mode and only when `window.__TAURI_INTERNALS__` is absent, so it is inactive under `npm run tauri dev` and absent from production builds. It fakes the `main` window, the event plugin, a settings store that is always empty so defaults apply, and the app's commands as no-op or empty responses. Unknown commands log a `console.warn` and resolve `null`. File dialogs, real file I/O, export, native menus, and the detached preview window still can't be exercised in a browser.
   - **On a given port** (browser only, for factory agents): `npx vite --port <port>`. The config sets `strictPort`, so it fails instead of drifting if the port is taken. `npm run tauri dev` always uses 1420, so only one can run at a time.
 - **Validation** (these will become `factory/checks.sh`):
   - `npm test`: Vitest, node environment; tests live next to their sources as `src/**/*.test.ts`
