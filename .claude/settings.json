@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(cargo *)",
+      "Bash(rustc *)",
+      "Bash(python3 *)",
+      "Bash(python *)",
+      "Bash(bash factory/checks.sh *)",
+      "Bash(bash ./factory/checks.sh *)",
+      "Bash(factory/checks.sh *)",
+      "Bash(./factory/checks.sh *)",
+      "Bash(factory/bin/*)",
+      "Bash(./factory/bin/*)",
+      "Bash(bash factory/bin/*)",
+      "Bash(bash ./factory/bin/*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git push * +*)",
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push * main:*)",
+      "Bash(git push *:main)",
+      "Bash(git push *:main *)",
+      "Bash(git push *refs/heads/main*)",
+      "Bash(gh repo delete*)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf ..*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(rm -rf C:*)",
+      "Bash(rm -rf D:*)",
+      "Bash(rm -rf * /*)",
+      "Bash(rm -rf * ~*)",
+      "Bash(rm -rf * ..*)",
+      "Bash(rm -fr /*)",
+      "Bash(rm -fr ~*)",
+      "Bash(rm -fr ..*)",
+      "Bash(rm -fr $HOME*)",
+      "Bash(rm -fr C:*)",
+      "Bash(rm -fr D:*)",
+      "Bash(rm -fr * /*)",
+      "Bash(rm -fr * ~*)",
+      "Bash(rm -fr * ..*)"
+    ]
+  }
+}
