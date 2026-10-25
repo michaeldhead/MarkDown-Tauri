@@ -3,6 +3,7 @@ import {
   Bold,
   Code,
   Columns2,
+  CornerDownLeft,
   Download,
   ExternalLink,
   Eye,
@@ -30,6 +31,7 @@ import {
   X,
 } from 'lucide-react'
 import {
+  insertHardLineBreak,
   insertHorizontalRule,
   insertImage,
   insertLink,
@@ -208,6 +210,12 @@ export default function Toolbar({
           title="Horizontal Rule"
           disabled={!editorReady}
           onClick={run(insertHorizontalRule)}
+        />
+        <Btn
+          Icon={CornerDownLeft}
+          title="Hard Line Break (two trailing spaces)"
+          disabled={!editorReady}
+          onClick={run(insertHardLineBreak)}
         />
         <Btn
           Icon={TableIcon}

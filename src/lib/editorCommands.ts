@@ -156,6 +156,10 @@ export function insertHorizontalRule(view: EditorView): void {
   insertSnippet(view, '\n---\n')
 }
 
+export function insertHardLineBreak(view: EditorView): void {
+  insertSnippet(view, '  \n')
+}
+
 export function insertImage(view: EditorView): void {
   insertSnippet(view, '![alt](url)')
 }

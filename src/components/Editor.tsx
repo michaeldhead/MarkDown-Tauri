@@ -9,6 +9,7 @@ import { EditorState, Prec } from '@codemirror/state'
 import { useMemo, type MouseEvent as ReactMouseEvent } from 'react'
 import { getCodeBlockLanguageAtPos } from '../lib/editorCommands'
 import { ghsDarkTheme, ghsInkTheme } from '../lib/editorThemes'
+import { trailingSpaceMarkers } from '../lib/trailingSpaces'
 
 type Theme = 'dark' | 'ink'
 
@@ -26,6 +27,7 @@ type EditorProps = {
   fontSize?: number
   fontFamily?: string
   tabSize?: number
+  showTrailingSpaces?: boolean
 }
 
 export default function Editor({
@@ -42,6 +44,7 @@ export default function Editor({
   fontSize = 14,
   fontFamily = "'Cascadia Code', Consolas, monospace",
   tabSize = 2,
+  showTrailingSpaces = true,
 }: EditorProps) {
   const extensions = useMemo<Extension[]>(() => {
     const themeExtension = theme === 'dark' ? ghsDarkTheme : ghsInkTheme
@@ -49,6 +52,10 @@ export default function Editor({
     if (wordWrap) {
       base.push(EditorView.lineWrapping)
     }
+    if (showTrailingSpaces) {
+      base.push(trailingSpaceMarkers())
+    }
+
     // Ctrl+Shift+F is App's Focus Mode toggle; CM's search keymap would
     // otherwise also match it (Mod-f) and open the search panel.
     base.push(
@@ -96,7 +103,7 @@ export default function Editor({
       )
     }
     return base
-  }, [theme, wordWrap, tabSize, onScroll, onOpenLangPicker])
+  }, [theme, wordWrap, tabSize, showTrailingSpaces, onScroll, onOpenLangPicker])
 
   // Suppress the WebView2 default context menu and delegate to the
   // native Tauri popup driven by App.tsx. Wrapping at the host div is

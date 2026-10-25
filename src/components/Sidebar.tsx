@@ -59,6 +59,8 @@ type SidebarProps = {
   onEditorFontFamilyChange: (family: string) => void
   editorTabSize: number
   onEditorTabSizeChange: (size: number) => void
+  showTrailingSpaces: boolean
+  onShowTrailingSpacesChange: (v: boolean) => void
 }
 
 const PANEL_TITLES: Record<PanelId, string> = {
@@ -146,6 +148,8 @@ export default function Sidebar({
   onEditorFontFamilyChange,
   editorTabSize,
   onEditorTabSizeChange,
+  showTrailingSpaces,
+  onShowTrailingSpacesChange,
 }: SidebarProps) {
   return (
     <div className="flex" style={{ flexShrink: 0 }}>
@@ -235,6 +239,8 @@ export default function Sidebar({
                 onEditorFontFamilyChange={onEditorFontFamilyChange}
                 editorTabSize={editorTabSize}
                 onEditorTabSizeChange={onEditorTabSizeChange}
+                showTrailingSpaces={showTrailingSpaces}
+                onShowTrailingSpacesChange={onShowTrailingSpacesChange}
               />
             )}
           </div>
