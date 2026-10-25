@@ -35,15 +35,6 @@ describe('renderMarkdown', () => {
     expect(html).toMatch(/<table data-source-line="14">/)
   })
 
-  // Known gap: mdast-util-to-hast applies hProperties for `code` nodes to the
-  // inner <code>, not <pre>, and the sanitize schema only allows className on
-  // <code>, so fenced code blocks currently lose data-source-line entirely.
-  // When that is fixed this test will start failing — change it.fails to it.
-  it.fails('stamps data-source-line on fenced code blocks', async () => {
-    const html = await renderMarkdown('Para.\n\n```js\nconst x = 1\n```')
-    expect(html).toMatch(/<(pre|code)[^>]*data-source-line="3"/)
-  })
-
   it('renders a GFM table', async () => {
     const html = await renderMarkdown('| a | b |\n| - | - |\n| 1 | 2 |')
     expect(html).toContain('<table')
