@@ -1,0 +1,2 @@
+*.sh text eol=lf
+factory/bin/* text eol=lf
