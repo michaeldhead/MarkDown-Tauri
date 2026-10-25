@@ -853,6 +853,20 @@ Installed the zazencodes software factory v2 (`/factory run`: GitHub issues labe
 - The builder's stop hook goes in the frontmatter under `Stop`; Claude Code converts it to `SubagentStop` when the agent runs as a subagent.
 - Browser review uses `npx vite --port <port>` (CLI overrides the 1420 config port, and `strictPort` still applies). `npm run tauri dev` is pinned to 1420, which is another reason to keep `concurrency` at 1.
 
+
+### Fix — Preview List Markers (completed 2026-10-25)
+
+Issue #6: the preview pane showed list items with indent but no bullets or numbers.
+
+**What was built:** In `src/index.css`, `.preview-content ul` is `disc` and `ol` is `decimal`. Nested lists: `ul ul` is `circle`, `ul ul ul` (and deeper) is `square`, `ol ol` is `decimal`; a `ul` inside an `ol` keeps `disc`. `li.task-list-item` is `list-style-type: none` so GFM task lists keep showing only the checkbox. The existing `li::marker { color: var(--accent) }` now has something to color, so markers follow the theme accent and any accent override.
+
+**Cause:** Tailwind v4 preflight (`@layer base`) sets `list-style: none` on `ol, ul, menu`, and `.preview-content` set only padding. Unlayered rules in `index.css` override preflight without `!important`.
+
+**Export stylesheets:** The styled HTML and PDF stylesheets in `src/lib/preview.ts` are standalone documents without Tailwind, use browser default list styles, and were checked and left unchanged.
+
+**Lessons learned:**
+- Any element styled under `.preview-content` must restate the properties preflight resets, such as list styles.
+
 ---
 
 ## Backlog
