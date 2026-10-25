@@ -42,7 +42,10 @@ If the change shows up on a page, look at it. Start the dev server from
 AGENTS.md in the worktree, in the background, on your port.
 
 Then use the `agent-browser` CLI (run `agent-browser skills get core` first) to
-screenshot the page at desktop and phone widths. Pass `--session <job-id>-ui` on
+screenshot the page at a typical desktop width and at the narrowest supported
+window width: the main window's `minWidth` in `src-tauri/tauri.conf.json`. If
+no `minWidth` is set, say so under Notes (not as a finding) and check only the
+desktop width. Pass `--session <job-id>-ui` on
 every `agent-browser` call, so other jobs' reviewers never drive your browser.
 Don't sign in or submit forms. When you're done, run
 `agent-browser --session <job-id>-ui close` and stop the dev server.
@@ -54,7 +57,7 @@ Don't sign in or submit forms. When you're done, run
 - It uses the existing styling system and classes. Flag new one-off CSS or
   hard-coded colours where a theme value exists.
 - Alignment, spacing rhythm and hierarchy hold up, and nothing overflows at
-  phone width.
+  the narrowest supported window width.
 - Text contrast is readable.
 
 If the branch has no visual change, write PASS and say so.

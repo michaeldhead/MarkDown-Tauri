@@ -70,6 +70,11 @@ command you ran and its result, or what the page showed.
   never drive your browser. Close it with
   `agent-browser --session <job-id>-builder close` and stop the dev server when
   you're done.
+- After stopping the dev server, confirm its process has exited before you
+  run `checks.sh` or finish: nothing should still be listening on your port
+  (`netstat -ano | grep :<port>` prints no `LISTENING` line). On Windows, a
+  running dev server keeps files under `node_modules` locked, and `npm ci`
+  then fails. If it is still running, kill it by its PID and check again.
 
 ## Commit, push and the PR
 

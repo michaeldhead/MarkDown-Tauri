@@ -216,7 +216,10 @@ Run `factory/bin/gate <job>`.
 - Exit 2: the gate couldn't run. Stop driving the job and tell the user what
   it printed.
 
-No reviewer runs on a failing gate.
+No reviewer runs on a failing gate. Never rerun a failed gate yourself, even
+when the failure looks flaky or environmental: a FAIL always follows the
+steps above, back to the builder with the log or to a human when rounds are
+exhausted.
 
 ### review
 
@@ -272,6 +275,8 @@ run `/factory rework <n>`.
 - Never push to the base branch, never force-push, never deploy.
 - At most `round_limit` build rounds per job before a human is asked; the
   scripts enforce it.
+- Never rerun a failed gate on your own. A failed gate goes back to the
+  builder with its log, or to a human when rounds are exhausted.
 
 ## Reporting
 

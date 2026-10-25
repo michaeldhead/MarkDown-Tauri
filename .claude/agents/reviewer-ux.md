@@ -56,7 +56,10 @@ what renders, and judge the native parts from the code.
 - The copy is short, plain and consistent with the rest of the app.
 - Accessibility: real buttons and links, labels, focus order, keyboard use, and
   alt text.
-- Mobile: it works at phone width.
+- Narrow window: it works at the narrowest supported window width, the main
+  window's `minWidth` in `src-tauri/tauri.conf.json`. This is a desktop app;
+  don't check phone widths. If no `minWidth` is set, say so under Notes (not
+  as a finding).
 
 If the branch has no user-facing change, write PASS and say so.
 
