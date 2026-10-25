@@ -18,6 +18,7 @@ import ExportDialog from './components/ExportDialog'
 import AboutModal from './components/AboutModal'
 import HelpModal from './components/HelpModal'
 import TabBar from './components/TabBar'
+import { Minimize2 } from 'lucide-react'
 import PreviewWindowApp from './components/PreviewWindowApp'
 import { newTab, type Tab } from './lib/tabs'
 import {
@@ -206,6 +207,8 @@ function MainWindowApp() {
   const [exportOpen, setExportOpen] = useState<boolean>(false)
   const [aboutOpen, setAboutOpen] = useState<boolean>(false)
   const [helpOpen, setHelpOpen] = useState<boolean>(false)
+  // Session-only: never persisted, so every launch starts with Focus Mode off.
+  const [focusMode, setFocusMode] = useState<boolean>(false)
   const [previewDetached, setPreviewDetached] = useState<boolean>(false)
   const [wordWrap, setWordWrap] = useState<boolean>(true)
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(true)
@@ -1305,6 +1308,19 @@ function MainWindowApp() {
         setHelpOpen(true)
         return
       }
+      // Escape exits Focus Mode only when nothing else claimed it. Modals with
+      // their own window listeners run after this one, so check the flags.
+      if (e.key === 'Escape') {
+        if (
+          focusMode &&
+          !(paletteOpen || langPickerOpen || exportOpen || aboutOpen || helpOpen) &&
+          !e.defaultPrevented &&
+          !(e.target as Element | null)?.closest?.('.cm-panels')
+        ) {
+          e.preventDefault()
+          setFocusMode(false)
+        }
+      }
       if (!e.ctrlKey && !e.metaKey) return
       const key = e.key.toLowerCase()
       // Ctrl+K opens the Command Palette regardless of editor focus.
@@ -1322,6 +1338,11 @@ function MainWindowApp() {
       // Suppress every other global Ctrl-shortcut while a modal is open
       // so the user can type into its input without firing actions.
       if (paletteOpen || langPickerOpen || exportOpen || aboutOpen || helpOpen) return
+      if (key === 'f' && e.shiftKey) {
+        e.preventDefault()
+        setFocusMode((v) => !v)
+        return
+      }
       const view = editorView
       // File ops
       if (key === 'n' && !e.shiftKey) {
@@ -1380,6 +1401,7 @@ function MainWindowApp() {
     exportOpen,
     aboutOpen,
     helpOpen,
+    focusMode,
     openCodeBlockPicker,
   ])
 
@@ -1744,6 +1766,7 @@ function MainWindowApp() {
       { id: 'cmd-view-split', kind: 'command', label: 'Split Mode', detail: 'View', action: () => setViewMode('split') },
       { id: 'cmd-view-preview', kind: 'command', label: 'Preview Mode', detail: 'View', action: () => setViewMode('preview') },
       { id: 'cmd-toggle-sidebar', kind: 'command', label: 'Toggle Sidebar', detail: 'View', action: toggleSidebar },
+      { id: 'cmd-toggle-focus-mode', kind: 'command', label: 'Toggle Focus Mode', detail: 'View', shortcut: 'Ctrl+Shift+F', action: () => setFocusMode((v) => !v) },
     )
 
     // Commands — Format (require an editor view)
@@ -1890,6 +1913,7 @@ function MainWindowApp() {
 
   return (
     <>
+      {!focusMode && (
       <Toolbar
         viewMode={viewMode}
         onChangeViewMode={setViewMode}
@@ -1904,6 +1928,8 @@ function MainWindowApp() {
         previewDetached={previewDetached}
         editorView={editorView}
       />
+      )}
+      {!focusMode && (
       <TabBar
         tabs={tabs}
         activeTabId={activeTab.id}
@@ -1911,6 +1937,7 @@ function MainWindowApp() {
         onClose={closeTab}
         onNewTab={newFile}
       />
+      )}
       <div
         className="flex-1 flex overflow-hidden"
         style={{
@@ -1926,6 +1953,7 @@ function MainWindowApp() {
           e.preventDefault()
         }}
       >
+        {!focusMode && (
         <Sidebar
           isOpen={sidebarOpen}
           activePanel={activePanel}
@@ -1967,6 +1995,7 @@ function MainWindowApp() {
           editorTabSize={editorTabSize}
           onEditorTabSizeChange={setEditorTabSize}
         />
+        )}
         <div
           ref={splitContainerRef}
           className="flex-1 flex overflow-hidden"
@@ -2003,6 +2032,7 @@ function MainWindowApp() {
           )}
         </div>
       </div>
+      {!focusMode && (
       <StatusBar
         filePath={filePath}
         isDirty={isDirty}
@@ -2013,6 +2043,33 @@ function MainWindowApp() {
         charCount={charCount}
         readingTimeMin={readingTimeMin}
       />
+      )}
+      {focusMode && (
+        <button
+          type="button"
+          aria-label="Exit Focus Mode"
+          title="Exit Focus Mode (Esc)"
+          onClick={() => setFocusMode(false)}
+          style={{
+            position: 'fixed',
+            top: 8,
+            right: 24,
+            width: 28,
+            height: 28,
+            zIndex: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+          }}
+        >
+          <Minimize2 size={14} />
+        </button>
+      )}
       <CommandPalette
         isOpen={paletteOpen}
         onClose={() => setPaletteOpen(false)}

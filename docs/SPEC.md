@@ -937,6 +937,22 @@ Job 005 (#11) dims Markdown syntax characters in the editor so content stands ou
 - `processingInstruction` is a subtag of `meta`, so markers previously got the `meta` colour by fallback, only slightly dimmed and identical to the quote text in GHS Ink.
 - Marker spans carry the parent's class too (heading, emphasis, quote), and same-specificity rules resolve by array order. The `processingInstruction` rule must stay last in each array or parent colours win.
 
+### Focus Mode (completed 2026-10-25)
+
+Job 007 (#13) adds a distraction-free Focus Mode toggled with Ctrl+Shift+F.
+
+**What was built:**
+- **Toggle:** a `focusMode` boolean in `App`, flipped by Ctrl+Shift+F (placed after the modal guard, so it does nothing while a modal is open) and by the `cmd-toggle-focus-mode` palette command. It is also listed in the Help shortcuts.
+- **Hidden and kept:** `Toolbar`, `TabBar`, `Sidebar` and `StatusBar` are not rendered while it is on, using in-place `{!focusMode && ...}` so `Editor`, `PreviewPane` and `SmartGutter` are never remounted. The CodeMirror instance, undo history, cursor and scroll positions survive. `viewMode`, `splitRatio`, `sidebarOpen` and `activePanel` are untouched, so the sidebar returns as it was. The existing flex layout makes the split container fill the window.
+- **Session-only:** the state is never written to the settings store or `localStorage`; each launch starts with it off.
+- **Exit button:** a fixed 28px `Minimize2` button at the top right (`zIndex` 900, below the 1000 modals), coloured only with theme variables.
+- **Escape:** exits Focus Mode only when it is on, no modal flag (`paletteOpen`, `langPickerOpen`, `exportOpen`, `aboutOpen`, `helpOpen`) is set, `e.defaultPrevented` is false, and the target is not inside `.cm-panels`.
+
+**Lessons learned:**
+- `ExportDialog`, `AboutModal` and `HelpModal` add their `window` keydown listeners only while open, so they run after App's listener. `defaultPrevented` is still false when App sees the event, so App must check the modal flags itself.
+- CodeMirror's search keymap (`Mod-f`) also matches Ctrl+Shift+F and opens the search panel, contrary to first assumption. `Editor` adds a highest-precedence `keydown` DOM handler that claims the combo so App's toggle is the only effect.
+- The CodeMirror search panel closes on Escape through its keymap, so App checks for `.cm-panels` in the target rather than relying on ordering.
+
 ---
 
 ## Backlog
