@@ -1022,6 +1022,16 @@ Jobs 003–006 exposed two bugs in `factory/bin/job` and one reliability gap in 
 
 ---
 
+### PDF Export via @react-pdf/renderer (completed 2026-10-25)
+
+**What was built:** Job 011 (#27) replaced the WebView2 print path with `@react-pdf/renderer`. `src/lib/export/pdf.tsx` exports `buildPdfDocument(markdown, title, components)`, a pure function that walks the mdast from `parseMarkdown` into a `<Document>` with one LETTER `<Page>` (72pt padding, Helvetica 11pt), and `buildPdfBlob(markdown, title)`, which loads the library with `await import('@react-pdf/renderer')` and returns `pdf(doc).toBlob()`. The library is never imported statically, so it lands in its own chunk and stays out of the entry bundle. `exportToPdf` in `exporters.ts` derives the base name, builds the blob, converts it to a `Uint8Array` and hands it to `saveBinaryExport`. Inline formatting uses a `{ bold, italic, strike }` context: every run is one flat leaf `Text` whose font family (`Helvetica`, `-Bold`, `-Oblique`, `-BoldOblique`) and decoration come from that context, and `strong`, `emphasis` and `delete` add no wrapper `Text`. Links become a react-pdf `Link` only for `http:`, `https:` and `mailto:` URLs (case-insensitive); anything else renders as plain link text. Images are never fetched and render as `[image: alt]`. Raw HTML is shown with tags stripped. All sibling elements carry index-built keys.
+
+**Deviations:** The PDF now renders before the save dialog opens, so a cancelled save still costs a render. The Rust `export_pdf_silent` command, the `export_pdf` menu item, `wrapAsPrintHtml` and the browser mock case are kept but unused (a later cleanup). PDF default names now come from `deriveExportBaseName` (first heading or line) instead of the file name. The Export Dialog PDF sublabel changed from `print dialog` to `.pdf`.
+
+**Lessons learned:** The built-in PDF fonts use WinAnsi encoding, so the ballot box glyphs for task items (U+2610, U+2611) and other non-Latin characters probably do not render in the PDF; fixing that needs a registered font, which is a product decision. Passing the components into `buildPdfDocument` keeps the document tree testable without a static import of the library. `toBlob()` is the browser-safe output call; `toBuffer()` is for the node build.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |

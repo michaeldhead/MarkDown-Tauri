@@ -154,7 +154,7 @@ export default function ExportDialog({
         <Row
           Icon={Download}
           label="PDF"
-          sublabel="print dialog"
+          sublabel=".pdf"
           onClick={run(onExportPdf)}
         />
         <Row
