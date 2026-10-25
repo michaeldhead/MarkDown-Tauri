@@ -46,10 +46,12 @@ import {
   DEFAULT_ACCENT,
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
+  DEFAULT_TAB_SIZE,
   FONT_SIZE_MAX,
   FONT_SIZE_MIN,
   type ThemePreference,
   isThemePreference,
+  normalizeTabSize,
   resolveTheme,
 } from './lib/theme'
 import {
@@ -80,6 +82,7 @@ const STORE_KEY_AUTOSAVE = 'autoSaveInterval'
 const STORE_KEY_ACCENT_COLOR = 'accentColor'
 const STORE_KEY_FONT_SIZE = 'editorFontSize'
 const STORE_KEY_FONT_FAMILY = 'editorFontFamily'
+const STORE_KEY_TAB_SIZE = 'editorTabSize'
 const RECENT_FILES_MAX = 20
 
 // Auto-save interval in seconds. 0 = Off (no timer set).
@@ -210,6 +213,7 @@ function MainWindowApp() {
   const [accentColor, setAccentColor] = useState<string>(DEFAULT_ACCENT)
   const [editorFontSize, setEditorFontSize] = useState<number>(DEFAULT_FONT_SIZE)
   const [editorFontFamily, setEditorFontFamily] = useState<string>(DEFAULT_FONT_FAMILY)
+  const [editorTabSize, setEditorTabSize] = useState<number>(DEFAULT_TAB_SIZE)
   const [codeBlockFenceLine, setCodeBlockFenceLine] = useState<number | null>(null)
   const [timelineSnapshots, setTimelineSnapshots] = useState<string[]>([])
   const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null)
@@ -261,6 +265,7 @@ function MainWindowApp() {
         const storedAccent = await store.get<string>(STORE_KEY_ACCENT_COLOR)
         const storedFontSize = await store.get<number>(STORE_KEY_FONT_SIZE)
         const storedFontFamily = await store.get<string>(STORE_KEY_FONT_FAMILY)
+        const storedTabSize = await store.get<number>(STORE_KEY_TAB_SIZE)
 
         if (!mounted) return
         if (typeof storedWordWrap === 'boolean') setWordWrap(storedWordWrap)
@@ -294,6 +299,7 @@ function MainWindowApp() {
         if (typeof storedFontFamily === 'string' && storedFontFamily.length > 0) {
           setEditorFontFamily(storedFontFamily)
         }
+        setEditorTabSize(normalizeTabSize(storedTabSize))
         if (isThemePreference(storedTheme)) {
           setTheme(storedTheme)
           applyTheme(
@@ -504,7 +510,7 @@ function MainWindowApp() {
     return () => mql.removeEventListener('change', onChange)
   }, [theme])
 
-  // ----- Editor font (size + family) persistence -----
+  // ----- Editor font (size + family) and tab size persistence -----
   useEffect(() => {
     if (!settingsLoaded.current || !settingsStore.current) return
     const store = settingsStore.current
@@ -512,12 +518,13 @@ function MainWindowApp() {
       try {
         await store.set(STORE_KEY_FONT_SIZE, editorFontSize)
         await store.set(STORE_KEY_FONT_FAMILY, editorFontFamily)
+        await store.set(STORE_KEY_TAB_SIZE, editorTabSize)
         await store.save()
       } catch (err) {
         console.warn('Failed to persist editor font settings:', err)
       }
     })()
-  }, [editorFontSize, editorFontFamily])
+  }, [editorFontSize, editorFontFamily, editorTabSize])
 
   // ----- Default view mode persistence -----
   useEffect(() => {
@@ -1848,6 +1855,7 @@ function MainWindowApp() {
         showLineNumbers={showLineNumbers}
         fontSize={editorFontSize}
         fontFamily={editorFontFamily}
+        tabSize={editorTabSize}
       />
     ),
     [
@@ -1863,6 +1871,7 @@ function MainWindowApp() {
       showLineNumbers,
       editorFontSize,
       editorFontFamily,
+      editorTabSize,
     ],
   )
 
@@ -1955,6 +1964,8 @@ function MainWindowApp() {
           onEditorFontSizeChange={setEditorFontSize}
           editorFontFamily={editorFontFamily}
           onEditorFontFamilyChange={setEditorFontFamily}
+          editorTabSize={editorTabSize}
+          onEditorTabSizeChange={setEditorTabSize}
         />
         <div
           ref={splitContainerRef}

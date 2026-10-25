@@ -909,6 +909,20 @@ Job 003's (#9) merge-time gate failed: the UX reviewer's Vite dev server was sti
 - Every agent that starts a dev server can leave a lock behind, not just the builder. Agent rules can be skipped, so the gate cleans up deterministically as well.
 - The `+1`/`+2` reviewer offsets live in the factory skill, not `config.json`. The gate hard-codes them, so the two must change together.
 
+### Editor Tab Size (completed 2026-10-25)
+
+Job 004 (#10) adds an editor tab size setting with two choices, 2 and 4 spaces.
+
+**What was built:**
+- **Settings panel:** a "Tab Size" pill row (2 / 4) after "Editor Font". `Sidebar` forwards `editorTabSize` and `onEditorTabSizeChange` from `App`.
+- **Persistence:** the `editorTabSize` key in `settings.json`, default 2. It is saved by the existing editor-font effect. On load, `normalizeTabSize` in `src/lib/theme.ts` maps any stored value other than the number 2 or 4 to 2.
+- **Editor:** `Editor` takes a `tabSize` prop and pushes `EditorState.tabSize.of(tabSize)` and `indentUnit.of(' '.repeat(tabSize))` into the `extensions` memo, with `tabSize` in its deps. The change applies to the open editor live, without a remount or touching the document. Existing text is not reformatted; indentation is always spaces.
+- **Tests:** `src/lib/theme.tabSize.test.ts` covers `normalizeTabSize`.
+
+**Lessons learned:**
+- Changing a dep of the `extensions` memo reconfigures the live CodeMirror editor, so settings that map to extensions need no special apply step.
+- Existing test files are protected, so new tests for `theme.ts` go in a separate `theme.<topic>.test.ts` file.
+
 ---
 
 ## Backlog
