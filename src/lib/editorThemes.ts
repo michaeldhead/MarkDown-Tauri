@@ -65,7 +65,7 @@ const ghsDarkBase = EditorView.theme(
   { dark: true },
 )
 
-const ghsDarkHighlight = HighlightStyle.define([
+export const ghsDarkHighlight = HighlightStyle.define([
   // Markdown headings — match preview colors
   { tag: tags.heading1, color: '#d4a843', fontWeight: '700', fontSize: '1.1em' },
   { tag: tags.heading2, color: '#4ec9b0', fontWeight: '600' },
@@ -111,6 +111,9 @@ const ghsDarkHighlight = HighlightStyle.define([
   { tag: tags.quote, color: '#8b949e', fontStyle: 'italic' },
   { tag: tags.meta, color: '#7d8590' },
   { tag: tags.atom, color: '#79c0ff' },
+  // Must stay last: processingInstruction is a subtag of meta and markers also carry
+  // their parent's class (heading, emphasis...), so later rules win on colour.
+  { tag: tags.processingInstruction, color: '#6e7681' },
 ])
 
 export const ghsDarkTheme: Extension = [
@@ -174,7 +177,7 @@ const ghsInkBase = EditorView.theme(
   { dark: false },
 )
 
-const ghsInkHighlight = HighlightStyle.define([
+export const ghsInkHighlight = HighlightStyle.define([
   // Markdown headings
   { tag: tags.heading1, color: '#0550ae', fontWeight: '700', fontSize: '1.1em' },
   { tag: tags.heading2, color: '#1a7f37', fontWeight: '600' },
@@ -220,6 +223,9 @@ const ghsInkHighlight = HighlightStyle.define([
   { tag: tags.quote, color: '#57606a', fontStyle: 'italic' },
   { tag: tags.meta, color: '#57606a' },
   { tag: tags.atom, color: '#0550ae' },
+  // Must stay last: processingInstruction is a subtag of meta and markers also carry
+  // their parent's class (heading, emphasis...), so later rules win on colour.
+  { tag: tags.processingInstruction, color: '#8c959f' },
 ])
 
 export const ghsInkTheme: Extension = [

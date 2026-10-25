@@ -923,6 +923,20 @@ Job 004 (#10) adds an editor tab size setting with two choices, 2 and 4 spaces.
 - Changing a dep of the `extensions` memo reconfigures the live CodeMirror editor, so settings that map to extensions need no special apply step.
 - Existing test files are protected, so new tests for `theme.ts` go in a separate `theme.<topic>.test.ts` file.
 
+### Dim Markdown Syntax Markers (completed 2026-10-25)
+
+Job 005 (#11) dims Markdown syntax characters in the editor so content stands out.
+
+**What was built:**
+- **Rule:** a `tags.processingInstruction` rule, colour only, added as the last entry of `ghsDarkHighlight` (`#6e7681`) and `ghsInkHighlight` (`#8c959f`) in `src/lib/editorThemes.ts`. Both styles are now exported by name.
+- **Nodes dimmed:** `HeaderMark`, `EmphasisMark`, `CodeMark`, `QuoteMark`, `ListMark`, `LinkMark` (so link brackets dim too) and `HardBreak`. They all share the `processingInstruction` tag.
+- **Weight and size:** the rule sets no font size, weight or style, so a marker keeps its parent's (the H1 `#` stays bold at 1.1em).
+- **Tests:** `src/lib/editorThemes.test.ts` runs `highlightTree` over a sample for both styles and checks marker spans, content spans, the rule's colour and the rule order.
+
+**Lessons learned:**
+- `processingInstruction` is a subtag of `meta`, so markers previously got the `meta` colour by fallback, only slightly dimmed and identical to the quote text in GHS Ink.
+- Marker spans carry the parent's class too (heading, emphasis, quote), and same-specificity rules resolve by array order. The `processingInstruction` rule must stay last in each array or parent colours win.
+
 ---
 
 ## Backlog
