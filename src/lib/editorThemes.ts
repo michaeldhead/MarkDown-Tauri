@@ -57,6 +57,7 @@ const ghsDarkBase = EditorView.theme(
       outline: '1px solid #58a6ff',
     },
     '.cm-trailingSpace': {
+      backgroundColor: 'transparent',
       backgroundImage: 'radial-gradient(circle, #6e7681 1.5px, transparent 2px)',
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'center',
@@ -174,6 +175,7 @@ const ghsInkBase = EditorView.theme(
       outline: '1px solid #d4a72c',
     },
     '.cm-trailingSpace': {
+      backgroundColor: 'transparent',
       backgroundImage: 'radial-gradient(circle, #8c959f 1.5px, transparent 2px)',
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'center',
