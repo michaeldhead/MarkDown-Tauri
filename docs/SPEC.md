@@ -937,6 +937,21 @@ Job 005 (#11) dims Markdown syntax characters in the editor so content stands ou
 - `processingInstruction` is a subtag of `meta`, so markers previously got the `meta` colour by fallback, only slightly dimmed and identical to the quote text in GHS Ink.
 - Marker spans carry the parent's class too (heading, emphasis, quote), and same-specificity rules resolve by array order. The `processingInstruction` rule must stay last in each array or parent colours win.
 
+### Trailing-Space Markers and Hard Line Break (completed 2026-10-25)
+
+Job 006 (#12) shows trailing spaces as faint dots and adds a hard line break toolbar button.
+
+**What was built:**
+- **Decoration:** `src/lib/trailingSpaces.ts` exports `trailingSpaceRun` (offsets of a trailing run of 2+ U+0020 spaces, else null; tabs end the run) and `trailingSpaceMarkers()`, a `ViewPlugin` that adds one `Decoration.mark` (`cm-trailingSpace`) per space for each line in `visibleRanges`. Only runs of 2+ are marked; the document is never changed.
+- **Theme:** `.cm-trailingSpace` in `ghsDarkBase` (`#6e7681`) and `ghsInkBase` (`#8c959f`) draws a centred, non-repeating radial-gradient dot per span.
+- **Setting:** `showTrailingSpaces` (store key `showTrailingSpaces`, default On) is saved in the editor-toggles persistence effect in `App.tsx`, passed to `Editor`, and toggled by an On/Off "Trailing Spaces" section in Settings between Tab Size and Default View Mode.
+- **Toolbar:** `insertHardLineBreak` (`insertSnippet(view, '  \n')`) is bound to a `CornerDownLeft` button titled "Hard Line Break (two trailing spaces)" after Horizontal Rule.
+- **Tests:** `src/lib/trailingSpaces.test.ts` covers `trailingSpaceRun`.
+
+**Lessons learned:**
+- One mark per space (not one per run) keeps the dot centred in each space, which matters for proportional editor fonts where a space is not `1ch`.
+- `insertHardLineBreak` needs a live `EditorView`, so it is verified in the browser rather than in node Vitest.
+
 ---
 
 ## Backlog
