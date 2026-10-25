@@ -1,4 +1,14 @@
 export type Theme = 'dark' | 'ink'
+export type ThemePreference = Theme | 'auto'
+
+export function resolveTheme(preference: ThemePreference, osPrefersDark: boolean): Theme {
+  if (preference === 'auto') return osPrefersDark ? 'dark' : 'ink'
+  return preference
+}
+
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'dark' || value === 'ink' || value === 'auto'
+}
 
 export const THEME_TOKENS: Record<Theme, Record<string, string>> = {
   dark: {

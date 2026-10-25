@@ -3,14 +3,14 @@ import {
   FONT_FAMILY_PRESETS,
   FONT_SIZE_MAX,
   FONT_SIZE_MIN,
+  type ThemePreference,
 } from '../../lib/theme'
 
-export type Theme = 'dark' | 'ink'
 export type ViewMode = 'write' | 'split' | 'preview'
 
 type SettingsPanelProps = {
-  theme: Theme
-  onThemeChange: (theme: Theme) => void
+  theme: ThemePreference
+  onThemeChange: (theme: ThemePreference) => void
   defaultViewMode: ViewMode
   onDefaultViewModeChange: (mode: ViewMode) => void
   onRegisterFileAssociation: () => void
@@ -52,9 +52,10 @@ const btnStyle = (isActive: boolean): React.CSSProperties => ({
   transition: 'background 0.1s, color 0.1s, border-color 0.1s',
 })
 
-const THEME_OPTIONS: { value: Theme; label: string }[] = [
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'GHS Dark' },
   { value: 'ink', label: 'GHS Ink' },
+  { value: 'auto', label: 'Auto' },
 ]
 
 const VIEW_MODE_OPTIONS: { value: ViewMode; label: string }[] = [

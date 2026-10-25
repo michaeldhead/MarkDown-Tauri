@@ -882,6 +882,21 @@ Tuning after the first two factory jobs (001 fenced code blocks, #4; 002 preview
 - Agent prompts written for web apps need adjusting for a desktop-only Tauri app: phone widths and manual browser checks don't fit it.
 - On Windows, any process left running in a worktree can break the next `npm ci`. Agents must confirm their processes have exited, and the checks retry to absorb brief locks.
 
+### Auto Theme (completed 2026-10-25)
+
+Added an Auto option to Settings > Theme that follows the Windows light/dark mode (job 003, #9).
+
+**What was built:**
+- `src/lib/theme.ts` keeps `Theme = 'dark' | 'ink'` as the resolved theme and adds `ThemePreference = Theme | 'auto'`, `resolveTheme(preference, osPrefersDark)` and `isThemePreference(value)`. Auto maps dark to GHS Dark and light to GHS Ink; no new palette.
+- `App.tsx` state `theme` is now the preference. A separate `osPrefersDark` state starts from `matchMedia('(prefers-color-scheme: dark)')`; while the preference is `'auto'` an effect listens for the query's `change` event and removes the listener on cleanup. `resolvedTheme = resolveTheme(theme, osPrefersDark)` is what `applyTheme`, `<Editor>`, the `preview-content-update` emit and `previewSnapshotRef` receive. Re-running `applyTheme(resolvedTheme, accentColor)` on an OS switch keeps the accent override.
+- `settings.json` `theme` may now be `"auto"`. Load uses `isThemePreference`; missing or invalid values still fall back to `dark`.
+- The detached preview window still only receives `dark`/`ink`, so `PreviewWindowApp.tsx` is unchanged.
+- Unit tests in `src/lib/theme.test.ts`.
+
+**Lessons learned:**
+- Keep the stored preference separate from the resolved theme so downstream consumers never need to know about Auto.
+- `agent-browser set media` fires the same `change` event as a Windows mode switch, so live switching is verifiable in a plain browser.
+
 ---
 
 ## Backlog

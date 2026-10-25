@@ -14,7 +14,8 @@ import FilesPanel from './panels/FilesPanel'
 import SnippetsPanel from './panels/SnippetsPanel'
 import SnippetStudioPanel from './panels/SnippetStudioPanel'
 import TimelinePanel from './panels/TimelinePanel'
-import SettingsPanel, { type Theme, type ViewMode } from './panels/SettingsPanel'
+import SettingsPanel, { type ViewMode } from './panels/SettingsPanel'
+import type { ThemePreference } from '../lib/theme'
 
 export type PanelId =
   | 'outline'
@@ -43,8 +44,8 @@ type SidebarProps = {
   onSelectSnapshot: (filename: string) => void
   onRestoreSnapshot: (filename: string) => void
   onRefreshTimeline: () => void
-  theme: Theme
-  onThemeChange: (theme: Theme) => void
+  theme: ThemePreference
+  onThemeChange: (theme: ThemePreference) => void
   defaultViewMode: ViewMode
   onDefaultViewModeChange: (mode: ViewMode) => void
   onRegisterFileAssociation: () => void
