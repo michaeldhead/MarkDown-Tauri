@@ -3,6 +3,7 @@ import {
   FONT_FAMILY_PRESETS,
   FONT_SIZE_MAX,
   FONT_SIZE_MIN,
+  TAB_SIZE_OPTIONS,
   type ThemePreference,
 } from '../../lib/theme'
 
@@ -22,6 +23,8 @@ type SettingsPanelProps = {
   onEditorFontSizeChange: (size: number) => void
   editorFontFamily: string
   onEditorFontFamilyChange: (family: string) => void
+  editorTabSize: number
+  onEditorTabSizeChange: (size: number) => void
 }
 
 const sectionLabelStyle: React.CSSProperties = {
@@ -86,6 +89,8 @@ export default function SettingsPanel({
   onEditorFontSizeChange,
   editorFontFamily,
   onEditorFontFamilyChange,
+  editorTabSize,
+  onEditorTabSizeChange,
 }: SettingsPanelProps) {
   const autoSaveLabel =
     AUTOSAVE_OPTIONS.find((o) => o.value === autoSaveInterval)?.label ?? 'Off'
@@ -179,6 +184,20 @@ export default function SettingsPanel({
             }}
           >
             {preset.name}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ ...sectionLabelStyle, marginTop: 20 }}>Tab Size</div>
+      <div style={groupStyle}>
+        {TAB_SIZE_OPTIONS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onEditorTabSizeChange(value)}
+            style={btnStyle(editorTabSize === value)}
+          >
+            {value}
           </button>
         ))}
       </div>

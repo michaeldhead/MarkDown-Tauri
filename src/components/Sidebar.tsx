@@ -57,6 +57,8 @@ type SidebarProps = {
   onEditorFontSizeChange: (size: number) => void
   editorFontFamily: string
   onEditorFontFamilyChange: (family: string) => void
+  editorTabSize: number
+  onEditorTabSizeChange: (size: number) => void
 }
 
 const PANEL_TITLES: Record<PanelId, string> = {
@@ -142,6 +144,8 @@ export default function Sidebar({
   onEditorFontSizeChange,
   editorFontFamily,
   onEditorFontFamilyChange,
+  editorTabSize,
+  onEditorTabSizeChange,
 }: SidebarProps) {
   return (
     <div className="flex" style={{ flexShrink: 0 }}>
@@ -229,6 +233,8 @@ export default function Sidebar({
                 onEditorFontSizeChange={onEditorFontSizeChange}
                 editorFontFamily={editorFontFamily}
                 onEditorFontFamilyChange={onEditorFontFamilyChange}
+                editorTabSize={editorTabSize}
+                onEditorTabSizeChange={onEditorTabSizeChange}
               />
             )}
           </div>

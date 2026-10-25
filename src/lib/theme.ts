@@ -6,6 +6,13 @@ export function resolveTheme(preference: ThemePreference, osPrefersDark: boolean
   return preference
 }
 
+export const DEFAULT_TAB_SIZE = 2
+export const TAB_SIZE_OPTIONS = [2, 4] as const
+
+export function normalizeTabSize(value: unknown): 2 | 4 {
+  return value === 2 || value === 4 ? value : DEFAULT_TAB_SIZE
+}
+
 export function isThemePreference(value: unknown): value is ThemePreference {
   return value === 'dark' || value === 'ink' || value === 'auto'
 }

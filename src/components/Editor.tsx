@@ -4,6 +4,8 @@ import CodeMirror, {
   type Statistics,
 } from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
+import { indentUnit } from '@codemirror/language'
+import { EditorState } from '@codemirror/state'
 import { useMemo, type MouseEvent as ReactMouseEvent } from 'react'
 import { getCodeBlockLanguageAtPos } from '../lib/editorCommands'
 import { ghsDarkTheme, ghsInkTheme } from '../lib/editorThemes'
@@ -23,6 +25,7 @@ type EditorProps = {
   showLineNumbers?: boolean
   fontSize?: number
   fontFamily?: string
+  tabSize?: number
 }
 
 export default function Editor({
@@ -38,6 +41,7 @@ export default function Editor({
   showLineNumbers = true,
   fontSize = 14,
   fontFamily = "'Cascadia Code', Consolas, monospace",
+  tabSize = 2,
 }: EditorProps) {
   const extensions = useMemo<Extension[]>(() => {
     const themeExtension = theme === 'dark' ? ghsDarkTheme : ghsInkTheme
@@ -45,6 +49,7 @@ export default function Editor({
     if (wordWrap) {
       base.push(EditorView.lineWrapping)
     }
+    base.push(EditorState.tabSize.of(tabSize), indentUnit.of(' '.repeat(tabSize)))
     if (onScroll) {
       base.push(
         EditorView.domEventHandlers({
@@ -82,7 +87,7 @@ export default function Editor({
       )
     }
     return base
-  }, [theme, wordWrap, onScroll, onOpenLangPicker])
+  }, [theme, wordWrap, tabSize, onScroll, onOpenLangPicker])
 
   // Suppress the WebView2 default context menu and delegate to the
   // native Tauri popup driven by App.tsx. Wrapping at the host div is
