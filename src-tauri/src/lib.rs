@@ -30,6 +30,16 @@ fn write_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn write_file_bytes(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    if let Some(parent) = std::path::Path::new(&path).parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+    fs::write(&path, bytes).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn path_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
@@ -910,6 +920,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_file,
             write_file,
+            write_file_bytes,
             path_exists,
             open_dialog,
             save_dialog,
