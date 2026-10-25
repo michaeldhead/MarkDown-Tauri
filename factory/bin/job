@@ -27,6 +27,7 @@ except ImportError:  # Windows (local patch, not upstream): lock with msvcrt ins
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -470,6 +471,12 @@ def advance(job, stage):
             rework = sorted(d.glob("rework-*.md"))
             require(rework and rework[-1].stat().st_mtime > (d / "decision.md").stat().st_mtime,
                     "use `job rework` to send a job back to the builder")
+            # Archive the escalation, so the approver writes a fresh decision.md
+            # instead of the old ESCALATE being read again (local patch, not upstream).
+            k = 1
+            while (d / f"decision-{k}.md").exists():
+                k += 1
+            (d / "decision.md").rename(d / f"decision-{k}.md")
             job["round_limit"] = job["round"] + CONFIG["max_rounds"]
             next_round(job)
             label("issue", job["issue"], remove=LABELS["needs_human"])
@@ -484,13 +491,45 @@ def advance(job, stage):
             comment("issue", job["issue"], body)
         label("issue", job["issue"], add=LABELS["needs_human"])
 
-    if stage == "merged" and Path(job["worktree"]).exists():
-        run(["git", "worktree", "remove", "--force", job["worktree"]])
-        run(["git", "branch", "-D", job["branch"]], check=False)
-
     job["stage"] = stage
     job["ended"] = now() if stage in TERMINAL | WAITING else None
+    if stage == "merged":
+        # The PR is merged, so record that before cleaning up: a cleanup failure
+        # must never leave the job in merging (local patch, not upstream).
+        save(job)
+        remove_worktree(job)
     return job
+
+
+def remove_worktree(job):
+    """Close the job's browser sessions, then remove its worktree and branch.
+
+    Never raises (local patch, not upstream). A worktree that won't go, usually
+    because a process on Windows still holds a file in it, is reported instead.
+    """
+    browser = shutil.which("agent-browser")
+    for role in ("builder", "ux", "ui") if browser else ():
+        # Closing a session that doesn't exist succeeds and does nothing. No pipes:
+        # a browser daemon that inherits them would keep this call from returning.
+        try:
+            subprocess.run([browser, "--session", f"{job['id']}-{role}", "close"], cwd=REPO,
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=60)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    if not Path(job["worktree"]).exists():
+        return
+    try:
+        res = run(["git", "worktree", "remove", "--force", job["worktree"]], check=False)
+        error = (res.stderr or res.stdout).strip() if res.returncode else None
+    except OSError as e:
+        error = str(e)
+    if error:
+        print(f"job: {job['id']} is merged, but its worktree is left at {job['worktree']}: {error}\n"
+              f"job: remove it with `git worktree remove --force \"{job['worktree']}\"`, "
+              "then `git worktree prune`", file=sys.stderr)
+        return
+    run(["git", "branch", "-D", job["branch"]], check=False)
 
 
 # ---- Commands --------------------------------------------------------------

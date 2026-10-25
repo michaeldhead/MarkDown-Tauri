@@ -981,6 +981,23 @@ Two problems held up job 006. Its gate was refused because `cargo check` in `che
 - A cached `cargo check` skips the build script, so to prove the schemas regenerate you have to force it to rerun (touch `build.rs`).
 - Union merge doesn't understand structure. It only works because SPEC.md is append-only. Two branches editing the same existing line would both survive without a conflict marker, so SPEC.md still needs a quick read after a merge.
 
+### Factory Tuning 3b (completed 2026-10-25)
+
+Jobs 003–006 exposed two bugs in `factory/bin/job` and one reliability gap in the agents. After job 006 was reworked, its old `ESCALATE` `decision.md` was still there, so the approve step ("spawn the approver if `decision.md` doesn't exist") would have read the stale escalation instead of asking for a new decision. It had to be archived by hand. Separately, `job merge` removed the worktree inside the `merged` transition before saving, so a failed `git worktree remove` (on Windows, a process still holding a file in the worktree) raised, and a PR already merged on GitHub stayed in `merging`. Agents also sometimes finished with a good reply but no file, which stalled the job. No app code changed.
+
+**What changed and why:**
+- **`job rework` archives `decision.md` as `decision-<k>.md`** (the next unused `k`) in the `needs-human → build` transition, the same way `needs-info → intake` archives `intake.md`. Marked `local patch, not upstream`. The approver always writes a fresh decision, and earlier ones stay readable.
+- **`job merge` can't be stuck by cleanup** (marked `local patch, not upstream`). The `merged` transition now saves `job.json` first, then calls `remove_worktree`, which never raises. That function closes the job's `agent-browser` sessions (`<job-id>-builder`, `-ux`, `-ui`; closing one that doesn't exist does nothing, and a missing CLI is skipped), then runs `git worktree remove --force`. If removal fails, the job is still `merged`. The function prints the leftover path, git's error and the fix (`git worktree remove --force "<path>"`, then `git worktree prune`) to stderr, and leaves the branch alone. The `needs-human → merged` path in `job queue` gets the same treatment.
+- **Reviewers and the approver are told the file is the deliverable.** `reviewer-code`, `reviewer-security`, `reviewer-ux`, `reviewer-ui` and `approver` now say that writing their file is required, not an optional report, and that the job cannot proceed without it. A run without the file, or with a first line that isn't exactly the verdict, is a failed run. Frontmatter and reconstruction markers are unchanged.
+- **The factory skill replaces an agent that doesn't deliver.** A new "When an agent doesn't deliver" section lists each agent's file and expected first line. On a missing or invalid file, the orchestrator spawns exactly one fresh replacement automatically (same prompt and model, plus a note that the previous run left no valid file). It stops for a human only if the replacement also fails. The review and approve steps point to it, replacing the old "stop and tell the user" rule. A new guardrail says the orchestrator never edits `job.json` directly: only `factory/bin/job` writes it.
+
+**Verification:** a harness loaded `factory/bin/job` with GitHub calls stubbed and git and agent-browser running for real. (a) Reworking a throwaway job with an existing `decision.md` produced `decision-1.md` and moved it to build round 2. A second rework produced `decision-2.md` and kept `decision-1.md`. (b) A throwaway job in `merging`, with an open `<job-id>-ux` browser session and a worktree path that git refused to remove, ended in `merged`. The session was closed, and the leftover path, git's error and both commands were reported. A real removable worktree was also removed, along with its branch. All throwaway jobs, folders and branches were deleted afterwards.
+
+**Lessons learned:**
+- Record the outcome before the cleanup. Once the merge has happened, everything after it is best-effort, and failures should be reported, not raised.
+- Don't capture the output of `agent-browser` calls that may start its daemon. The daemon inherits the pipes and `subprocess.run` never returns. `remove_worktree` sends its streams to `DEVNULL` with a timeout.
+- A file left by an earlier pass through a stage gets read as this pass's result. Every stage file that can be rewritten in a later round needs archiving when the job loops back.
+
 ---
 
 ## Backlog
