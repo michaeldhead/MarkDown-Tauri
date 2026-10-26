@@ -32,8 +32,6 @@ export function handleMockCommand(cmd: string, _args?: unknown): unknown {
     case 'write_snapshot':
     case 'register_file_association':
     case 'show_editor_context_menu':
-    case 'export_pdf_silent':
-    case 'export_docx':
     case 'plugin:store|set':
     case 'plugin:store|save':
       return null
