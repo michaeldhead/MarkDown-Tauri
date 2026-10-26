@@ -1049,6 +1049,28 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 
 ---
 
+## DOCX Export via docx (completed 2026-10-26)
+
+### What was built
+- `docx` (runtime) and `jszip` (dev, for tests) were added. `buildDocxBlob(markdown, title)` in `src/lib/export/docx.ts` loads the library with `await import('docx')`, walks the mdast from `parseMarkdown` and returns `Packer.toBlob`, so the library lands in its own chunk.
+- `exportToDocx` in `exporters.ts` mirrors `exportToPdf`: it builds once with the derived base name, then saves `<base>.docx` through `saveBinaryExport`. `exportDocx` in `App.tsx` now calls it.
+- Headings use real Word styles: `Heading1` to `Heading4` are overridden through `styles.paragraphStyles` with `outlineLevel` 0 to 3 (depths 5 and 6 use `Heading4`), so the Navigation Pane works.
+- Lists use a bullet and a decimal numbering reference (levels 0 to 8). Each ordered list gets its own numbering instance so it restarts at 1. No bullet character is typed into the text. Task items add a ballot box after the marker.
+- Tables and code blocks use DXA widths (9360 total, equal columns) and `ShadingType.CLEAR` fills. The header row is blue with white bold text; a code block is a one-cell gray table.
+- Links are written only for `http(s):` and `mailto:` URLs; anything else keeps just the link text.
+
+### Deviations
+- The Rust `export_docx` command stays but is no longer called.
+- The default file name now comes from `deriveExportBaseName` (first heading or line) rather than the file name.
+- The blob is built before the save dialog opens, as in PDF export.
+- Ordered list `start` numbers are ignored.
+
+### Lessons learned
+- `ShadingType.SOLID` and percentage widths render black or oddly in Word and LibreOffice; `CLEAR` shading with DXA widths is reliable.
+- The XML in the zip can be asserted on in node with `jszip`, so no Word install is needed for tests. A human should still open one exported file in Word.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |
