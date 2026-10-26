@@ -15,6 +15,7 @@ blockquote { margin-left: 0; padding-left: 12px; border-left: 3px solid #d1d5db;
 table { border-collapse: collapse; }
 th, td { border: 1px solid #d1d5db; padding: 4px 8px; }
 th { background: #1d4ed8; color: #ffffff; }
+th a, th code { color: #ffffff; }
 img { max-width: 100%; }
 `
 
