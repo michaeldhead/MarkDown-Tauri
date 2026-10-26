@@ -1110,6 +1110,23 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 
 ---
 
+## Word Export Header Cells and List Starts (completed 2026-10-26)
+
+### What was built
+- `Ctx` in `src/lib/export/docx.ts` gained `header?: boolean`, set by `tableBlock` for the header row. In header cells `linkRuns` keeps the white `ctx.color` (still underlined and wrapped in an `ExternalHyperlink`) and inline code uses `ctx.color` instead of `CODE_RED`, so both are readable on the blue fill. Body cells are unchanged.
+- Ordered list `start` is honoured. `buildDocxDocument` pre-scans the tree with `walk` for the distinct `start ?? 1` values of ordered lists. The `ordered` reference stays for start 1; each other start `n` registers an extra numbering config `ordered-<n>` whose levels carry `start: n` (`numberingLevels` takes an optional start). `listItem` picks the reference from its own list's start and keeps the per-list instance, so lists restart independently and nested lists use their own start.
+- `wordPreview.ts` gained `th a, th code { color: #ffffff; }`.
+- Tests: `docx.headerStart.test.ts`, `wordPreview.headerCell.test.ts`.
+
+### Deviations
+- The earlier DOCX deviation "Ordered list `start` numbers are ignored" is now resolved.
+- A `start` of 0 is honoured as 0, matching the PDF and plain-text exporters.
+
+### Lessons learned
+- docx 9.14 has no per-instance start override; `startOverride` comes from the reference's level `start`, so one reference per distinct start is the supported route.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |

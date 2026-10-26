@@ -14,13 +14,14 @@ interface Ctx {
   strike: boolean
   underline: boolean
   color?: string
+  header?: boolean
 }
 
 interface Env {
   lib: Lib
   defs: Definitions
   quote: boolean
-  // Next numbering instance, so each ordered list restarts at 1.
+  // Next numbering instance, so each ordered list restarts at its own start.
   instances: { next: number }
 }
 
@@ -61,6 +62,18 @@ const HEADINGS = [
   { size: 13, color: BODY, before: 240, after: 100 },
 ]
 
+function orderedRef(start: number): string {
+  return start === 1 ? ORDERED_REF : `${ORDERED_REF}-${start}`
+}
+
+function collectOrderedStarts(root: Nodes): number[] {
+  const starts = new Set<number>()
+  walk(root, (node) => {
+    if (node.type === 'list' && node.ordered) starts.add(node.start ?? 1)
+  })
+  return [...starts]
+}
+
 function collectDefinitions(root: Nodes): Definitions {
   const defs: Definitions = new Map()
   walk(root, (node) => {
@@ -81,7 +94,7 @@ function run(env: Env, text: string, ctx: Ctx, code = false): Docx.TextRun {
     bold: ctx.bold || undefined,
     italics: ctx.italic || undefined,
     strike: ctx.strike || undefined,
-    color: code ? CODE_RED : ctx.color,
+    color: code && !ctx.header ? CODE_RED : ctx.color,
     font: code ? MONO : undefined,
     underline: ctx.underline ? { type: UnderlineType.SINGLE } : undefined,
   })
@@ -103,7 +116,11 @@ function linkRuns(
   ctx: Ctx,
 ): Inline[] {
   if (!url || !SAFE_URL.test(url)) return childRuns(node, env, ctx)
-  const runs = childRuns(node, env, { ...ctx, color: BLUE, underline: true })
+  const runs = childRuns(node, env, {
+    ...ctx,
+    color: ctx.header ? ctx.color : BLUE,
+    underline: true,
+  })
   return [new env.lib.ExternalHyperlink({ link: url, children: runs })]
 }
 
@@ -229,7 +246,7 @@ function tableBlock(node: Table, env: Env, ctx: Ctx): Block[] {
   const colWidth = Math.floor(CONTENT_WIDTH / columns)
   const rows = node.children.map((row, r) => {
     const head = r === 0
-    const cellCtx: Ctx = head ? { ...ctx, bold: true, color: 'FFFFFF' } : ctx
+    const cellCtx: Ctx = head ? { ...ctx, bold: true, color: 'FFFFFF', header: true } : ctx
     const cell = (children: Block[]) =>
       new TableCell({
         width: { size: colWidth, type: WidthType.DXA },
@@ -266,7 +283,7 @@ function listItem(
   instance: number,
 ): Block[] {
   const numbering = {
-    reference: list.ordered ? ORDERED_REF : BULLET_REF,
+    reference: list.ordered ? orderedRef(list.start ?? 1) : BULLET_REF,
     level,
     instance: list.ordered ? instance : undefined,
   }
@@ -355,10 +372,11 @@ function block(node: Nodes, env: Env, ctx: Ctx): Block[] {
   }
 }
 
-function numberingLevels(lib: Lib, format: (typeof Docx.LevelFormat)[keyof typeof Docx.LevelFormat], ordered: boolean) {
+function numberingLevels(lib: Lib, format: (typeof Docx.LevelFormat)[keyof typeof Docx.LevelFormat], ordered: boolean, start?: number) {
   return Array.from({ length: MAX_LEVEL + 1 }, (_, level) => ({
     level,
     format,
+    start,
     text: ordered ? `%${level + 1}.` : BULLET_CHARS[level % BULLET_CHARS.length],
     alignment: lib.AlignmentType.LEFT,
     style: {
@@ -409,6 +427,12 @@ export function buildDocxDocument(
           reference: ORDERED_REF,
           levels: numberingLevels(lib, lib.LevelFormat.DECIMAL, true),
         },
+        ...collectOrderedStarts(root)
+          .filter((n) => n !== 1)
+          .map((n) => ({
+            reference: orderedRef(n),
+            levels: numberingLevels(lib, lib.LevelFormat.DECIMAL, true, n),
+          })),
       ],
     },
     sections: [
