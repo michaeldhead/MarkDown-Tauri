@@ -5,6 +5,7 @@ export interface SaveFilter {
   extensions: string[]
 }
 
+// Exports must use saveUtf8Export, not this function.
 export async function saveTextExport(
   defaultName: string,
   filters: SaveFilter[],
@@ -30,4 +31,12 @@ export async function saveBinaryExport(
   if (!path) return
   // A bare Uint8Array in the args does not serialize to a JSON array.
   await invoke('write_file_bytes', { path, bytes: Array.from(bytes) })
+}
+
+export async function saveUtf8Export(
+  defaultName: string,
+  filters: SaveFilter[],
+  text: string,
+): Promise<void> {
+  await saveBinaryExport(defaultName, filters, new TextEncoder().encode(text))
 }

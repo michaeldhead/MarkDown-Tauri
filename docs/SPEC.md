@@ -1110,6 +1110,25 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 
 ---
 
+## Export Write Grant and Safer Export File Names (completed 2026-10-26)
+
+### What was built
+- `save_dialog` stores its result in managed state `ExportWriteGrant` (the chosen path, or `None` on cancel; each dialog replaces the previous grant). `write_file_bytes` consumes the grant through `consume_write_grant`: it succeeds only when the path equals the granted string exactly, and any call, matching or not, uses the grant up. A mismatch, a missing grant or a poisoned lock returns an `Err` and writes nothing.
+- `write_file_bytes` no longer creates parent directories; the save dialog only returns paths whose folder exists.
+- HTML (Styled and Clean) and Plain Text exports now go through the new `saveUtf8Export`, which UTF-8 encodes the text and calls `saveBinaryExport`, so every export uses `save_dialog` then `write_file_bytes`.
+- `write_file` is still unrestricted because Save, Save As, auto-save and drafts use it. A wider write allow-list is a follow-up.
+- File name rules in `deriveExportBaseName`: (1) Unicode format characters (Cf: bidi controls, zero-width, soft hyphen, BOM) are removed first; (2) a name is reserved when the part before the first `.`, minus trailing spaces, is a device name, so `CON.txt` and `CON .txt` fall back while `CONTENT` and `COM10` do not; (3) truncation keeps whole grapheme clusters within 80 UTF-16 units via `Intl.Segmenter`.
+- Rust unit tests for the grant helper: run `npm run build` first, then `cargo test --lib --manifest-path src-tauri/Cargo.toml`. `factory/checks.sh` runs only `cargo check`.
+
+### Deviations
+- `saveTextExport` was kept (unused by production code) only because its test file is protected; exports use `saveUtf8Export`.
+- Removing ZWJ (U+200D, category Cf) splits ZWJ emoji sequences into separate emoji in suggested names.
+
+### Lessons learned
+- `save_dialog` is shared with Save As, which never calls `write_file_bytes`, so its grant simply goes unused until the next dialog.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |

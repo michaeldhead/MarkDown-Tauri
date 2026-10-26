@@ -5,6 +5,20 @@ import { parseMarkdown, walk } from './parse'
 const MAX_LENGTH = 80
 const RESERVED = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
 
+function isReserved(name: string): boolean {
+  return RESERVED.test(name.split('.')[0].replace(/ +$/, ''))
+}
+
+function truncate(name: string): string {
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+  let out = ''
+  for (const { segment } of segmenter.segment(name)) {
+    if (out.length + segment.length > MAX_LENGTH) break
+    out += segment
+  }
+  return out
+}
+
 function lineText(line: string): string {
   let out = ''
   walk(parseMarkdown(line), (node) => {
@@ -21,13 +35,17 @@ export function deriveExportBaseName(
   filePath: string | null,
 ): string {
   const line = markdown.split(/\r\n|\r|\n/).find((l) => l.trim() !== '')
-  const name = (line === undefined ? '' : lineText(line.trim()))
+  const text = (line === undefined ? '' : lineText(line.trim())).replace(
+    /\p{Cf}/gu,
+    '',
+  )
+  const name = truncate(
+    text
     .replace(/\s+/g, ' ')
     // eslint-disable-next-line no-control-regex
     .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '')
-    .trim()
-    .slice(0, MAX_LENGTH)
-    .replace(/[. ]+$/, '')
-  if (name !== '' && !RESERVED.test(name)) return name
+    .trim(),
+  ).replace(/[. ]+$/, '')
+  if (name !== '' && !isReserved(name)) return name
   return (filePath ? stripExt(basename(filePath)) : '') || 'untitled'
 }

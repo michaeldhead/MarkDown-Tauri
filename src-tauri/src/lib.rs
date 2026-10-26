@@ -14,6 +14,17 @@ pub struct DialogFilter {
 
 struct LaunchArg(Mutex<Option<String>>);
 
+/// The path most recently returned by `save_dialog`; `write_file_bytes` may use it once.
+struct ExportWriteGrant(Mutex<Option<String>>);
+
+fn consume_write_grant(grant: &mut Option<String>, path: &str) -> Result<(), String> {
+    match grant.take() {
+        Some(granted) if granted == path => Ok(()),
+        Some(_) => Err("Write refused: path does not match the chosen save location".to_string()),
+        None => Err("Write refused: no save location was chosen".to_string()),
+    }
+}
+
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| e.to_string())
@@ -30,11 +41,17 @@ fn write_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn write_file_bytes(path: String, bytes: Vec<u8>) -> Result<(), String> {
-    if let Some(parent) = std::path::Path::new(&path).parent() {
-        if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
+fn write_file_bytes(
+    state: tauri::State<ExportWriteGrant>,
+    path: String,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
+    {
+        let mut grant = state
+            .0
+            .lock()
+            .map_err(|_| "Write refused: export grant unavailable".to_string())?;
+        consume_write_grant(&mut grant, &path)?;
     }
     fs::write(&path, bytes).map_err(|e| e.to_string())
 }
@@ -57,6 +74,7 @@ async fn open_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
 #[tauri::command]
 async fn save_dialog(
     app: tauri::AppHandle,
+    state: tauri::State<'_, ExportWriteGrant>,
     default_name: String,
     filters: Option<Vec<DialogFilter>>,
 ) -> Result<Option<String>, String> {
@@ -72,7 +90,11 @@ async fn save_dialog(
         builder = builder.add_filter(&f.name, &exts);
     }
     let file_path = builder.blocking_save_file();
-    Ok(file_path.map(|fp| fp.to_string()))
+    let chosen = file_path.map(|fp| fp.to_string());
+    if let Ok(mut grant) = state.0.lock() {
+        *grant = chosen.clone();
+    }
+    Ok(chosen)
 }
 
 #[tauri::command]
@@ -504,6 +526,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(LaunchArg(Mutex::new(initial_arg)))
+        .manage(ExportWriteGrant(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             read_file,
             write_file,
@@ -540,4 +563,46 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matching_path_is_consumed() {
+        let mut g = Some("a.pdf".to_string());
+        assert!(consume_write_grant(&mut g, "a.pdf").is_ok());
+        assert_eq!(g, None);
+    }
+
+    #[test]
+    fn different_path_is_refused() {
+        let mut g = Some("a.pdf".to_string());
+        assert!(consume_write_grant(&mut g, "c.pdf").is_err());
+        assert_eq!(g, None);
+    }
+
+    #[test]
+    fn no_grant_is_refused() {
+        let mut g: Option<String> = None;
+        assert!(consume_write_grant(&mut g, "x").is_err());
+    }
+
+    #[test]
+    fn grant_is_single_use() {
+        let mut g = Some("x".to_string());
+        assert!(consume_write_grant(&mut g, "x").is_ok());
+        assert!(consume_write_grant(&mut g, "x").is_err());
+    }
+
+    #[test]
+    fn replaced_grant_refuses_old_path() {
+        let mut g = Some("old".to_string());
+        // A newer dialog replaces the grant before the old path is used.
+        g.replace("new".to_string());
+        assert!(consume_write_grant(&mut g, "old").is_err());
+        g = Some("new".to_string());
+        assert!(consume_write_grant(&mut g, "new").is_ok());
+    }
 }
