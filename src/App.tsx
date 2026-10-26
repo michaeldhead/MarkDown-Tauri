@@ -34,11 +34,12 @@ import {
 import type { PaletteItem } from './lib/palette'
 import { buildTopology, countWords, getActiveSectionIndex } from './lib/outline'
 import { slugFromPath, snapshotFilename } from './lib/timeline'
-import { basename, stripExt } from './lib/paths'
+import { basename } from './lib/paths'
 import {
   exportHtmlClean as runExportHtmlClean,
   exportHtmlStyled as runExportHtmlStyled,
   exportPlainText as runExportPlainText,
+  exportToDocx,
   exportToPdf,
 } from './lib/export/exporters'
 import { DEFAULT_SNIPPETS, type Snippet } from './lib/snippets'
@@ -915,11 +916,6 @@ function MainWindowApp() {
   }, [addTab])
 
   // ----- Exports -----
-  const exportTitleBase = useMemo(
-    () => (filePath ? stripExt(basename(filePath)) : 'untitled'),
-    [filePath],
-  )
-
   const exportHtmlStyled = useCallback(async () => {
     try {
       await runExportHtmlStyled({ markdown: content, filePath })
@@ -959,12 +955,7 @@ function MainWindowApp() {
 
   const exportDocx = useCallback(async () => {
     try {
-      const outputPath = await invoke<string | null>('save_dialog', {
-        defaultName: `${exportTitleBase}.docx`,
-        filters: [{ name: 'Word Document', extensions: ['docx'] }],
-      })
-      if (!outputPath) return
-      await invoke('export_docx', { path: outputPath, content })
+      await exportToDocx({ markdown: content, filePath })
     } catch (err) {
       console.error('DOCX export failed:', err)
       const { message } = await import('@tauri-apps/plugin-dialog')
@@ -973,7 +964,7 @@ function MainWindowApp() {
         kind: 'error',
       })
     }
-  }, [content, exportTitleBase])
+  }, [content, filePath])
 
   const copyMarkdown = useCallback(async () => {
     try {
