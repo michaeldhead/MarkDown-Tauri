@@ -1944,7 +1944,7 @@ function MainWindowApp() {
       >
         {!focusMode && (
         <Sidebar
-          isOpen={sidebarOpen}
+          isOpen={sidebarOpen && !exportPreviewOpen}
           activePanel={activePanel}
           onToggle={handlePanelToggle}
           topology={topology}

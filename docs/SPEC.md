@@ -1079,6 +1079,7 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 - `buildWordPreviewHtml` in `wordPreview.ts` is an HTML approximation of the DOCX look (Arial 11pt, blue H1, white page). It reuses `escapeHtml`, now exported from `preview.ts`.
 - The Word, Styled and Clean iframes use `sandbox=""` and `srcDoc`. The PDF cache holds the Blob; the object URL is created only for display and revoked on leaving the tab, on replacement and on unmount.
 - Escape closes the panel through a capture-phase window listener, skipped when another modal is open or the event comes from `.cm-panels`. `App.tsx` adds `exportPreviewOpen` to the Focus Mode Escape check only, not to the Ctrl-shortcut suppression, so global shortcuts keep working.
+- The outline sidebar collapses while the panel is open (`isOpen={sidebarOpen && !exportPreviewOpen}`) so the editor keeps about 260px at the 900px minimum window.
 - Entry points: a `Preview & Export…` row in the Export Dialog, the `export_preview` native menu id (after `export_dialog`), and the `cmd-export-preview` palette command.
 
 ### Deviations
