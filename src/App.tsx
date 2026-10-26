@@ -34,12 +34,12 @@ import {
 import type { PaletteItem } from './lib/palette'
 import { buildTopology, countWords, getActiveSectionIndex } from './lib/outline'
 import { slugFromPath, snapshotFilename } from './lib/timeline'
-import { renderMarkdown, wrapAsPrintHtml } from './lib/preview'
 import { basename, stripExt } from './lib/paths'
 import {
   exportHtmlClean as runExportHtmlClean,
   exportHtmlStyled as runExportHtmlStyled,
   exportPlainText as runExportPlainText,
+  exportToPdf,
 } from './lib/export/exporters'
 import { DEFAULT_SNIPPETS, type Snippet } from './lib/snippets'
 
@@ -946,18 +946,7 @@ function MainWindowApp() {
 
   const exportPdf = useCallback(async () => {
     try {
-      // Pick the destination first so a cancel costs no rendering work.
-      const outputPath = await invoke<string | null>('save_dialog', {
-        defaultName: `${exportTitleBase}.pdf`,
-        filters: [{ name: 'PDF', extensions: ['pdf'] }],
-      })
-      if (!outputPath) return
-
-      // Render to print-styled HTML, then let the Rust side drive WebView2's
-      // native PrintToPdf — no print dialog, straight to the chosen path.
-      const body = await renderMarkdown(content)
-      const html = wrapAsPrintHtml(body, exportTitleBase)
-      await invoke('export_pdf_silent', { html, outputPath })
+      await exportToPdf({ markdown: content, filePath })
     } catch (err) {
       console.error('PDF export failed:', err)
       const { message } = await import('@tauri-apps/plugin-dialog')
@@ -966,7 +955,7 @@ function MainWindowApp() {
         kind: 'error',
       })
     }
-  }, [content, exportTitleBase])
+  }, [content, filePath])
 
   const exportDocx = useCallback(async () => {
     try {
