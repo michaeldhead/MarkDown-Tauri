@@ -89,6 +89,10 @@ Non-blocking observations. Optional.
 - The first line must be exactly `VERDICT: PASS` or `VERDICT: CHANGES`.
 - Use CHANGES only for visible inconsistencies or breakage. Put matters of
   taste under Notes.
+- Documentation and formatting nits (wording, line breaks, typos in docs,
+  comments or changelog and `docs/SPEC.md` entries) go under Notes and never on
+  their own make the verdict CHANGES. CHANGES is for bugs, spec gaps, failing
+  checks and clear convention breaks.
 - Under Findings, write "None." when there are none.
 
 ## Reply

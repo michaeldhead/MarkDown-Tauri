@@ -91,6 +91,10 @@ Non-blocking observations. Optional.
 - Use CHANGES only for real, blocking security problems in this branch's change.
   Don't block on pre-existing issues the change didn't make worse; mention
   them under Notes.
+- Documentation and formatting nits (wording, line breaks, typos in docs,
+  comments or changelog and `docs/SPEC.md` entries) go under Notes and never on
+  their own make the verdict CHANGES. CHANGES is for bugs, spec gaps, failing
+  checks and clear convention breaks.
 - Under Findings, write "None." when there are none.
 
 ## Reply
