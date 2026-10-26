@@ -15,6 +15,8 @@ import SmartGutter from './components/SmartGutter'
 import CommandPalette from './components/CommandPalette'
 import LanguagePicker from './components/LanguagePicker'
 import ExportDialog from './components/ExportDialog'
+import ExportPreviewPanel from './components/ExportPreviewPanel'
+import type { PreviewFormat } from './lib/export/previewCache'
 import AboutModal from './components/AboutModal'
 import HelpModal from './components/HelpModal'
 import TabBar from './components/TabBar'
@@ -196,6 +198,7 @@ function MainWindowApp() {
   const [langPickerOpen, setLangPickerOpen] = useState<boolean>(false)
   const [langPickerMode, setLangPickerMode] = useState<'insert' | 'replace'>('insert')
   const [exportOpen, setExportOpen] = useState<boolean>(false)
+  const [exportPreviewOpen, setExportPreviewOpen] = useState<boolean>(false)
   const [aboutOpen, setAboutOpen] = useState<boolean>(false)
   const [helpOpen, setHelpOpen] = useState<boolean>(false)
   // Session-only: never persisted, so every launch starts with Focus Mode off.
@@ -966,6 +969,24 @@ function MainWindowApp() {
     }
   }, [content, filePath])
 
+  const exportFromPreview = useCallback(
+    (format: PreviewFormat) => {
+      switch (format) {
+        case 'pdf':
+          return void exportPdf()
+        case 'docx':
+          return void exportDocx()
+        case 'html-styled':
+          return void exportHtmlStyled()
+        case 'html-clean':
+          return void exportHtmlClean()
+        case 'text':
+          return void exportPlainText()
+      }
+    },
+    [exportPdf, exportDocx, exportHtmlStyled, exportHtmlClean, exportPlainText],
+  )
+
   const copyMarkdown = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content)
@@ -1158,6 +1179,9 @@ function MainWindowApp() {
         case 'export_dialog':
           setExportOpen(true)
           break
+        case 'export_preview':
+          setExportPreviewOpen(true)
+          break
         case 'show_help':
           setHelpOpen(true)
           break
@@ -1267,7 +1291,14 @@ function MainWindowApp() {
       if (e.key === 'Escape') {
         if (
           focusMode &&
-          !(paletteOpen || langPickerOpen || exportOpen || aboutOpen || helpOpen) &&
+          !(
+            paletteOpen ||
+            langPickerOpen ||
+            exportOpen ||
+            exportPreviewOpen ||
+            aboutOpen ||
+            helpOpen
+          ) &&
           !e.defaultPrevented &&
           !(e.target as Element | null)?.closest?.('.cm-panels')
         ) {
@@ -1353,6 +1384,7 @@ function MainWindowApp() {
     paletteOpen,
     langPickerOpen,
     exportOpen,
+    exportPreviewOpen,
     aboutOpen,
     helpOpen,
     focusMode,
@@ -1738,6 +1770,7 @@ function MainWindowApp() {
 
     // Commands — Export
     items.push(
+      { id: 'cmd-export-preview', kind: 'command', label: 'Preview & Export…', detail: 'Export', action: () => setExportPreviewOpen(true) },
       { id: 'cmd-export-html-styled', kind: 'command', label: 'Export HTML (Styled)', detail: 'Export', action: () => void exportHtmlStyled() },
       { id: 'cmd-export-html-clean', kind: 'command', label: 'Export HTML (Clean)', detail: 'Export', action: () => void exportHtmlClean() },
       { id: 'cmd-export-text', kind: 'command', label: 'Export Plain Text', detail: 'Export', action: () => void exportPlainText() },
@@ -1989,6 +2022,15 @@ function MainWindowApp() {
             <div className="flex-1 overflow-hidden">{previewPane}</div>
           )}
         </div>
+        {exportPreviewOpen && (
+          <ExportPreviewPanel
+            content={content}
+            filePath={filePath}
+            onClose={() => setExportPreviewOpen(false)}
+            onExport={exportFromPreview}
+            otherModalOpen={paletteOpen || langPickerOpen || exportOpen || aboutOpen || helpOpen}
+          />
+        )}
       </div>
       {!focusMode && (
       <StatusBar
@@ -2048,6 +2090,7 @@ function MainWindowApp() {
         onExportPdf={() => void exportPdf()}
         onExportText={() => void exportPlainText()}
         onCopyMarkdown={() => void copyMarkdown()}
+        onPreviewExport={() => setExportPreviewOpen(true)}
       />
       <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />

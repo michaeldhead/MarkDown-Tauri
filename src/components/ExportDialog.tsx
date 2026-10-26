@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Clipboard, Download, FileText } from 'lucide-react'
+import { Clipboard, Download, Eye, FileText } from 'lucide-react'
 
 type ExportDialogProps = {
   isOpen: boolean
@@ -11,6 +11,7 @@ type ExportDialogProps = {
   onExportPdf: () => void
   onExportText: () => void
   onCopyMarkdown: () => void
+  onPreviewExport: () => void
 }
 
 type RowProps = {
@@ -61,6 +62,7 @@ export default function ExportDialog({
   onExportPdf,
   onExportText,
   onCopyMarkdown,
+  onPreviewExport,
 }: ExportDialogProps) {
   useEffect(() => {
     if (!isOpen) return
@@ -133,6 +135,12 @@ export default function ExportDialog({
           {fileName}
         </div>
 
+        <Row
+          Icon={Eye}
+          label="Preview & Export…"
+          sublabel="side panel"
+          onClick={run(onPreviewExport)}
+        />
         <Row
           Icon={Download}
           label="HTML — Styled"
