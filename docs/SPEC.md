@@ -1030,6 +1030,23 @@ Jobs 003–006 exposed two bugs in `factory/bin/job` and one reliability gap in 
 
 **Lessons learned:** The built-in PDF fonts use WinAnsi encoding, so the ballot box glyphs for task items (U+2610, U+2611) and other non-Latin characters probably do not render in the PDF; fixing that needs a registered font, which is a product decision. Passing the components into `buildPdfDocument` keeps the document tree testable without a static import of the library. `toBlob()` is the browser-safe output call; `toBuffer()` is for the node build.
 
+### Factory Tuning 4 (completed 2026-10-26)
+
+Tuning after jobs 006–011. The UX reviewer judged the flow from the code instead of running it in four jobs (006, 009, 010 and 011), three of them after the browser test harness (job 008) made the app render in a plain browser. Job 010's (#30) code review returned CHANGES in round 1 for a single documentation nit, a code span in its `docs/SPEC.md` entry split across two lines, which cost the job a full extra build, gate and review round. No app code changed.
+
+**What changed and why:**
+- **The UX reviewer must run UI changes in the browser.** For any change with a UI surface, `reviewer-ux` starts the dev server (`npx vite --port <port>`) and exercises the changed flow with `agent-browser` through the browser test harness. Reading the code is not a substitute. Its "Look at it" section now describes the harness instead of saying `invoke()` calls fail, and limits code-only judgement to the native steps the harness can't run (file dialogs, real file I/O, export, native menus, the detached preview window).
+- **`review-ux.md` has a required "Browser check" section** listing what was opened (URL and window width) and every click, key press and text typed. If the reviewer couldn't run the flow, it says exactly why (the command and error, or the native step). Anything judged from the code alone is listed under "Not run" and stated as such. A change with no UI surface says "Not applicable:" and why.
+- **Documentation and formatting nits never block on their own.** `reviewer-code`, `reviewer-ux`, `reviewer-ui` and `reviewer-security` put wording, line-break and typo nits in docs, comments or changelog and `docs/SPEC.md` entries under Notes. CHANGES is for bugs, spec gaps, failing checks and clear convention breaks. `reviewer-code` adds that a required doc update missing altogether, such as the `docs/SPEC.md` entry, is still a convention break.
+- **The approver lists what nobody ran.** `decision.md` has a new "Not verified by running" section listing every acceptance criterion that no agent verified by running a command or driving the browser (build.md, `checks.md`, a reviewer's Browser check or the approver's own spot-check), or "None.". Each criterion under "Acceptance criteria" says which agent ran what, or "read only". When the approver escalates for a human check, "For the human" gives numbered manual steps: the command to run, what to open, what to click or type and the expected result.
+
+**Verification:** every file in `.claude/agents/` still has frontmatter identical to `main` (`name`, `description`, `tools`, `model`, plus `hooks` for the builder only) and exactly one reconstruction marker line. `bash factory/checks.sh` passed.
+
+**Lessons learned:**
+- A reviewer told it *may* look at a page will skip the browser whenever reading the code is easier. Making the check a required section in the review file, with an explicit "Not run" line, makes a skipped check visible to the approver.
+- Agent prompts need updating when the tooling they describe changes. The UX prompt still said the app couldn't render in a browser after the harness fixed that, which gave reviewers a ready excuse.
+- A blocking verdict costs a whole round (build, gate, every review). Reserve it for problems worth that cost.
+
 ---
 
 ## Backlog

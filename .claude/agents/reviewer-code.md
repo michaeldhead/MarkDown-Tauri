@@ -74,6 +74,11 @@ Non-blocking observations. Optional.
 - The first line must be exactly `VERDICT: PASS` or `VERDICT: CHANGES`.
 - Use CHANGES only for bugs, spec gaps, missing tests or clear convention
   breaks. Put style preferences under Notes.
+- Documentation and formatting nits (wording, line breaks, typos in docs,
+  comments or changelog and `docs/SPEC.md` entries) go under Notes and never on
+  their own make the verdict CHANGES. CHANGES is for bugs, spec gaps, failing
+  checks and clear convention breaks. A required doc update that is missing
+  altogether, such as the `docs/SPEC.md` entry, is a convention break.
 - When the spec itself is wrong or conflicts with the protected paths, say so
   as a finding and that it needs a human, rather than asking the builder to
   work around it.

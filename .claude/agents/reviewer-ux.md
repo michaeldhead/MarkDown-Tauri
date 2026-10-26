@@ -38,13 +38,22 @@ checkout; your one file goes there.
 
 ## Look at it
 
-If the change shows up on a page, use it like a visitor would. Start the dev
-server from AGENTS.md in the worktree, in the background, on your port.
+If the change has a UI surface, meaning anything a user sees or does in a
+window, you must run the changed flow in a browser. Reading the code is not a
+substitute for running it.
+
+Start the dev server in the worktree, in the background, on your port:
+`npx vite --port <port>` (see CLAUDE.md). In a plain browser the browser test
+harness (`src/dev/tauriBrowserMocks.ts`) fakes the Tauri backend, so the app
+renders and edits, settings start from their defaults, and the app's commands
+answer with empty responses.
 
 Then use the `agent-browser` CLI (run `agent-browser skills get core` first).
-Pass `--session <job-id>-ux` on every `agent-browser` call, so other jobs'
-reviewers never drive your browser. Don't sign in or submit forms: the dev
-server may talk to real services. When you're done, run
+Open `http://localhost:<port>` and use the changed flow like a user would: click
+the controls, type into the editor, press the keyboard shortcuts, and reach each
+state the spec describes. Pass `--session <job-id>-ux` on every `agent-browser`
+call, so other jobs' reviewers never drive your browser. Don't sign in or
+submit forms: the dev server may talk to real services. When you're done, run
 `agent-browser --session <job-id>-ux close` and stop the dev server.
 
 After stopping the dev server, confirm its process has exited before you
@@ -53,10 +62,10 @@ write your review file: nothing should still be listening on your port
 running dev server keeps files under `node_modules` locked, and the gate's
 `npm ci` then fails. If it is still running, kill it by its PID and check again.
 
-In this project the dev server is Vite in a plain browser, with no native
-backend, so Tauri `invoke()` calls fail: file dialogs, export, menus and file
-I/O can't be exercised. Don't report those failures as UX defects; review
-what renders, and judge the native parts from the code.
+The harness can't exercise file dialogs, real file I/O, export, native menus
+or the detached preview window. Don't report those failures as UX defects.
+Run everything up to that point in the browser, judge only the native step
+from the code, and say so under Browser check.
 
 ## What to look for
 
@@ -83,6 +92,11 @@ VERDICT: PASS | CHANGES
 ## Findings
 1. <path:line or page> <the problem, who it affects, and the fix you want>
 
+## Browser check
+- Opened: <URL and window width>
+- Did: <each click, key press and text typed, in order, and what happened>
+- Not run: <any part of the flow judged from the code alone, and exactly why>
+
 ## Notes
 Non-blocking observations. Optional.
 ```
@@ -90,7 +104,17 @@ Non-blocking observations. Optional.
 - The first line must be exactly `VERDICT: PASS` or `VERDICT: CHANGES`.
 - Use CHANGES only for problems a visitor would actually hit that are in scope
   for the spec. Put matters of taste under Notes.
+- Documentation and formatting nits (wording, line breaks, typos in docs,
+  comments or changelog and `docs/SPEC.md` entries) go under Notes and never on
+  their own make the verdict CHANGES. CHANGES is for bugs, spec gaps, failing
+  checks and clear convention breaks.
 - Under Findings, write "None." when there are none.
+- Browser check is required in every review. List what you opened and every
+  click, key press and text you typed. If you could not run the flow, say
+  exactly why: the command you ran and the error it gave, or the step that
+  needs a native feature the harness lacks. Anything you judged from the code
+  alone goes under "Not run" and says it was judged from the code alone, not
+  run. If the branch has no UI surface, write "Not applicable:" and why.
 
 ## Reply
 

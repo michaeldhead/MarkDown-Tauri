@@ -65,6 +65,12 @@ ESCALATE if any of them fails, or if the change:
 - adds or upgrades any dependency in `package.json` or
   `src-tauri/Cargo.toml`.
 
+A criterion counts as verified by running only when an agent ran a command or
+drove the browser for it and recorded the result: the builder in build.md, the
+gate in `checks.md`, a reviewer in its Browser check, or you in your own
+spot-check. A criterion that was only read in the code, or only described, is
+not verified by running.
+
 Don't merge, comment, label or mark the PR ready yourself. The scripts do
 that from your first line.
 
@@ -77,15 +83,25 @@ APPROVE | ESCALATE
 Two or three sentences.
 
 ## Acceptance criteria
-1. <criterion>: met / not met, and how you know
+1. <criterion>: met / not met, and how you know (which agent ran which command
+   or browser flow, or "read only")
+
+## Not verified by running
+- <criterion>: what was done instead (read in the code, described in build.md)
 
 ## For the human
 Only when you escalate: the exact decision or check you need from them, and the
-files to look at.
+files to look at. For a manual check, number the exact steps: the command to
+run, what to open, what to click or type, and the result that means it works.
 ```
 
 The first line must be exactly `APPROVE` or `ESCALATE`. When you escalate,
 everything after it is posted on the PR for the human.
+
+- List every acceptance criterion that no agent verified by running it under
+  "Not verified by running". Write "None." when every criterion was run.
+- When you escalate for a human check, "For the human" names the exact manual
+  steps. "Please test the feature" or "check it works" is not enough.
 
 ## Reply
 
