@@ -136,7 +136,10 @@ export default function ExportPreviewPanel({
   // Open or tab switch: show from cache or build immediately.
   useEffect(() => {
     mountedRef.current = true
-    if (active !== 'pdf') revokeUrl()
+    if (active !== 'pdf') {
+      revokeUrl()
+      setShown(null)
+    }
     void load(active, contentRef.current)
   }, [active, load, revokeUrl])
 
@@ -258,7 +261,7 @@ export default function ExportPreviewPanel({
       role="complementary"
       aria-label="Preview & Export"
       style={{
-        width: 480,
+        width: 'clamp(280px, 35vw, 480px)',
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -371,7 +374,7 @@ export default function ExportPreviewPanel({
           onClick={() => onExport(active)}
           style={{
             background: 'var(--accent)',
-            color: '#ffffff',
+            color: 'var(--bg-primary)',
             border: 'none',
             borderRadius: 4,
             fontSize: 12,

@@ -1074,7 +1074,7 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 ## Export Preview Panel (completed 2026-10-26)
 
 ### What was built
-- `ExportPreviewPanel` is a non-modal 480px right-hand column in the main row of `App.tsx`, rendered only while `exportPreviewOpen` is true, so closing unmounts it and clears its cache. It has tabs for PDF, Word Document, Web Page (Styled), Web Page (Clean) and Plain Text, a spinner, and Cancel / `Export <format>` buttons. Export calls the existing direct-export wrappers and leaves the panel open.
+- `ExportPreviewPanel` is a non-modal right-hand column (`clamp(280px, 35vw, 480px)` wide so the editor stays usable at the 900px minimum window) in the main row of `App.tsx`, rendered only while `exportPreviewOpen` is true, so closing unmounts it and clears its cache. It has tabs for PDF, Word Document, Web Page (Styled), Web Page (Clean) and Plain Text, a spinner, and Cancel / `Export <format>` buttons. Export calls the existing direct-export wrappers and leaves the panel open.
 - `src/lib/export/previewCache.ts` holds the format list, a per-format content-keyed cache and a debouncer (800 ms). Tab open or switch builds immediately (or shows the cached result); edits rebuild only the active tab after the debounce. Inactive tabs are never built.
 - `buildWordPreviewHtml` in `wordPreview.ts` is an HTML approximation of the DOCX look (Arial 11pt, blue H1, white page). It reuses `escapeHtml`, now exported from `preview.ts`.
 - The Word, Styled and Clean iframes use `sandbox=""` and `srcDoc`. The PDF cache holds the Blob; the object URL is created only for display and revoked on leaving the tab, on replacement and on unmount.
