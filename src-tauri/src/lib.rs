@@ -846,6 +846,7 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &MenuItem::with_id(app, "export_dialog", "Export…", true, Some("CmdOrCtrl+Shift+E"))?,
+            &MenuItem::with_id(app, "export_preview", "Preview & Export…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "export_html_styled", "HTML (Styled)", true, None::<&str>)?,
             &MenuItem::with_id(app, "export_html_clean", "HTML (Clean)", true, None::<&str>)?,

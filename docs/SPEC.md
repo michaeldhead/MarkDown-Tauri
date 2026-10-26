@@ -1071,6 +1071,27 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 
 ---
 
+## Export Preview Panel (completed 2026-10-26)
+
+### What was built
+- `ExportPreviewPanel` is a non-modal right-hand column (`clamp(280px, 35vw, 480px)` wide so the editor stays usable at the 900px minimum window) in the main row of `App.tsx`, rendered only while `exportPreviewOpen` is true, so closing unmounts it and clears its cache. It has tabs for PDF, Word Document, Web Page (Styled), Web Page (Clean) and Plain Text, a spinner, and Cancel / `Export <format>` buttons. Export calls the existing direct-export wrappers and leaves the panel open.
+- `src/lib/export/previewCache.ts` holds the format list, a per-format content-keyed cache and a debouncer (800 ms). Tab open or switch builds immediately (or shows the cached result); edits rebuild only the active tab after the debounce. Inactive tabs are never built.
+- `buildWordPreviewHtml` in `wordPreview.ts` is an HTML approximation of the DOCX look (Arial 11pt, blue H1, white page). It reuses `escapeHtml`, now exported from `preview.ts`.
+- The Word, Styled and Clean iframes use `sandbox=""` and `srcDoc`. The PDF cache holds the Blob; the object URL is created only for display and revoked on leaving the tab, on replacement and on unmount.
+- Escape closes the panel through a capture-phase window listener, skipped when another modal is open or the event comes from `.cm-panels`. `App.tsx` adds `exportPreviewOpen` to the Focus Mode Escape check only, not to the Ctrl-shortcut suppression, so global shortcuts keep working.
+- The outline sidebar collapses while the panel is open (`isOpen={sidebarOpen && !exportPreviewOpen}`) so the editor keeps about 260px at the 900px minimum window.
+- Entry points: a `Preview & Export…` row in the Export Dialog, the `export_preview` native menu id (after `export_dialog`), and the `cmd-export-preview` palette command.
+
+### Deviations
+- The PDF iframe is not sandboxed: Chromium and WebView2 will not load the built-in PDF viewer in a sandboxed frame. The Blob comes from react-pdf, not user HTML, and `csp` is `null`.
+- The Word preview is approximate; the real .docx is not rendered.
+
+### Lessons learned
+- A bubble-phase `stopPropagation` on `window` cannot stop another `window` listener, so Escape handling needs both the capture listener and the flag check in `App.tsx`.
+- Stale async builds must be checked against the active tab and a request token, and still go into the cache under the content they were built from.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |
