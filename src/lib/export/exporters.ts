@@ -2,6 +2,7 @@ import { buildHtmlClean, buildHtmlStyled } from './html'
 import { buildPlainText } from './plainText'
 import { deriveExportBaseName } from './fileName'
 import { buildPdfBlob } from './pdf'
+import { buildDocxBlob } from './docx'
 import { saveBinaryExport, saveTextExport, type SaveFilter } from './save'
 
 export interface ExportDoc {
@@ -24,6 +25,7 @@ type BinarySave = (
 type HtmlBuild = (markdown: string, title: string) => Promise<string>
 type TextBuild = (markdown: string) => string
 type PdfBuild = (markdown: string, title: string) => Promise<Blob>
+type DocxBuild = (markdown: string, title: string) => Promise<Blob>
 
 interface Deps<B> {
   build?: B
@@ -31,6 +33,9 @@ interface Deps<B> {
 }
 
 const PDF_FILTERS: SaveFilter[] = [{ name: 'PDF', extensions: ['pdf'] }]
+const DOCX_FILTERS: SaveFilter[] = [
+  { name: 'Word Document', extensions: ['docx'] },
+]
 const HTML_FILTERS: SaveFilter[] = [{ name: 'HTML', extensions: ['html', 'htm'] }]
 const TEXT_FILTERS: SaveFilter[] = [{ name: 'Text', extensions: ['txt'] }]
 
@@ -78,4 +83,16 @@ export async function exportToPdf(
   const blob = await build(doc.markdown, base)
   const bytes = new Uint8Array(await blob.arrayBuffer())
   await save(`${base}.pdf`, PDF_FILTERS, bytes)
+}
+
+export async function exportToDocx(
+  doc: ExportDoc,
+  deps: { build?: DocxBuild; save?: BinarySave } = {},
+): Promise<void> {
+  const build = deps.build ?? buildDocxBlob
+  const save = deps.save ?? saveBinaryExport
+  const base = deriveExportBaseName(doc.markdown, doc.filePath)
+  const blob = await build(doc.markdown, base)
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  await save(`${base}.docx`, DOCX_FILTERS, bytes)
 }
