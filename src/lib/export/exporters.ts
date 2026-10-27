@@ -3,7 +3,7 @@ import { buildPlainText } from './plainText'
 import { deriveExportBaseName } from './fileName'
 import { buildPdfBlob } from './pdf'
 import { buildDocxBlob } from './docx'
-import { saveBinaryExport, saveTextExport, type SaveFilter } from './save'
+import { saveBinaryExport, saveUtf8Export, type SaveFilter } from './save'
 
 export interface ExportDoc {
   markdown: string
@@ -53,14 +53,14 @@ export function exportHtmlStyled(
   doc: ExportDoc,
   deps: Deps<HtmlBuild> = {},
 ): Promise<void> {
-  return exportHtml(doc, deps.build ?? buildHtmlStyled, deps.save ?? saveTextExport)
+  return exportHtml(doc, deps.build ?? buildHtmlStyled, deps.save ?? saveUtf8Export)
 }
 
 export function exportHtmlClean(
   doc: ExportDoc,
   deps: Deps<HtmlBuild> = {},
 ): Promise<void> {
-  return exportHtml(doc, deps.build ?? buildHtmlClean, deps.save ?? saveTextExport)
+  return exportHtml(doc, deps.build ?? buildHtmlClean, deps.save ?? saveUtf8Export)
 }
 
 export async function exportPlainText(
@@ -68,7 +68,7 @@ export async function exportPlainText(
   deps: Deps<TextBuild> = {},
 ): Promise<void> {
   const build = deps.build ?? buildPlainText
-  const save = deps.save ?? saveTextExport
+  const save = deps.save ?? saveUtf8Export
   const base = deriveExportBaseName(doc.markdown, doc.filePath)
   await save(`${base}.txt`, TEXT_FILTERS, build(doc.markdown))
 }
