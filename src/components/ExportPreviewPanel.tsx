@@ -3,6 +3,7 @@ import { Loader2, X } from 'lucide-react'
 import { buildHtmlClean, buildHtmlStyled } from '../lib/export/html'
 import { buildPlainText } from '../lib/export/plainText'
 import { deriveExportBaseName } from '../lib/export/fileName'
+import { handlePreviewLinkEvent } from '../lib/links'
 import { buildPdfBlob } from '../lib/export/pdf'
 import { buildWordPreviewHtml } from '../lib/export/wordPreview'
 import {
@@ -51,6 +52,16 @@ const frameStyle = {
   border: 'none',
   background: '#ffffff',
 } as const
+
+// Sandboxed srcDoc iframes can't run scripts, so the parent attaches the link listeners.
+function attachLinkHandlers(e: React.SyntheticEvent<HTMLIFrameElement>) {
+  const doc = e.currentTarget.contentDocument
+  if (!doc) return
+  const scrollContainer = doc.scrollingElement ?? doc.documentElement
+  const listener = (event: Event) =>
+    handlePreviewLinkEvent(event as MouseEvent, { root: doc, scrollContainer })
+  for (const type of ['click', 'auxclick', 'mousedown']) doc.addEventListener(type, listener)
+}
 
 export default function ExportPreviewPanel({
   content,
@@ -211,8 +222,9 @@ export default function ExportPreviewPanel({
             </div>
             <iframe
               title="Word Document preview"
-              sandbox=""
+              sandbox="allow-same-origin"
               srcDoc={current}
+              onLoad={attachLinkHandlers}
               style={frameStyle}
             />
           </>
@@ -221,8 +233,9 @@ export default function ExportPreviewPanel({
         return (
           <iframe
             title="Web Page (Styled) preview"
-            sandbox=""
+            sandbox="allow-same-origin"
             srcDoc={current}
+            onLoad={attachLinkHandlers}
             style={frameStyle}
           />
         )
@@ -230,8 +243,9 @@ export default function ExportPreviewPanel({
         return (
           <iframe
             title="Web Page (Clean) preview"
-            sandbox=""
+            sandbox="allow-same-origin"
             srcDoc={current}
+            onLoad={attachLinkHandlers}
             style={frameStyle}
           />
         )
