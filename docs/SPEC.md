@@ -1143,6 +1143,26 @@ Tuning after jobs 006–011. The UX reviewer judged the flow from the code inste
 
 ---
 
+## Links Open Externally (completed 2026-10-30)
+
+### What was built
+- `src/lib/links.ts`: `classifyHref` (raw `href` attribute to external / anchor / none; only `http(s)` and `mailto` are external), `slugifyHeading` / `headingSlugs` (GitHub-style slugs with `-1`, `-2` duplicates), `openExternal` (plugin-opener `openUrl`, `console.error` on failure) and `handlePreviewLinkEvent`, which prevents default on any anchor, opens external links, and scrolls anchors inside the given scroll container only. Anchors resolve to `user-content-<id>`, then `<id>`, then a heading by slug; headings have no `id`s.
+- Surfaces: `PreviewPane` (main pane and detached preview window) wires click, auxclick and mousedown, and the heading-to-editor click runs only when the link handler returns false. The Word, Web Page (Styled) and Web Page (Clean) iframes in `ExportPreviewPanel` now use `sandbox="allow-same-origin"` and attach the same handler on load.
+- Capability: `preview.json` gets `opener:allow-open-url` scoped to `http://*`, `https://*` and `mailto:*`. `default.json` is unchanged.
+- Native guard in `lib.rs`: a `navigation-guard` plugin uses `on_navigation` with `is_app_navigation` to cancel anything other than app origins (`tauri://localhost`, `tauri.localhost`, the dev URL in dev, `about:blank`/`about:srcdoc`, and `blob:` of those). The `main` window is now built in `setup` from its config (`create: false`) so `on_new_window` can deny popups.
+- Tests: `src/lib/links.test.ts` and Rust tests for `is_app_navigation`.
+
+### Deviations
+- New-window deny applies to `main` only; the detached preview window is created from JS and relies on the frontend `preventDefault`.
+- Links in the PDF preview are covered only by the native guard.
+
+### Lessons learned
+- `on_navigation` sees top-level navigations only, not iframe navigations.
+- `on_new_window` exists only on Rust-built windows.
+- `instanceof HTMLElement` fails across iframe realms; the handler duck-types `closest`.
+
+---
+
 ## Backlog
 
 | ID | Item | Notes |
