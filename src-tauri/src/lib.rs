@@ -501,6 +501,50 @@ fn extract_markdown_path(args: &[String]) -> Option<String> {
     })
 }
 
+fn is_app_origin(url: &tauri::Url, dev_origin: Option<&tauri::Url>) -> bool {
+    match url.scheme() {
+        "tauri" => url.host_str() == Some("localhost"),
+        "http" | "https" => {
+            url.host_str() == Some("tauri.localhost")
+                || dev_origin.is_some_and(|dev| {
+                    url.scheme() == dev.scheme()
+                        && url.host_str() == dev.host_str()
+                        && url.port_or_known_default() == dev.port_or_known_default()
+                })
+        }
+        _ => false,
+    }
+}
+
+/// True for navigations that belong to the app itself; everything else is cancelled.
+fn is_app_navigation(url: &tauri::Url, dev_origin: Option<&tauri::Url>) -> bool {
+    match url.scheme() {
+        "about" => matches!(url.as_str(), "about:blank" | "about:srcdoc"),
+        "blob" => {
+            let origin = url.origin();
+            if !origin.is_tuple() {
+                return false;
+            }
+            tauri::Url::parse(&origin.ascii_serialization())
+                .is_ok_and(|inner| is_app_origin(&inner, dev_origin))
+        }
+        _ => is_app_origin(url, dev_origin),
+    }
+}
+
+fn navigation_guard() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    tauri::plugin::Builder::<tauri::Wry>::new("navigation-guard")
+        .on_navigation(|webview, url| {
+            let dev_url = if tauri::is_dev() {
+                webview.app_handle().config().build.dev_url.clone()
+            } else {
+                None
+            };
+            is_app_navigation(url, dev_url.as_ref())
+        })
+        .build()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
@@ -522,6 +566,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(navigation_guard())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -551,9 +596,19 @@ pub fn run() {
             // would make every later WebviewWindow (e.g. the detached
             // preview window from Fix-J) inherit the menu bar, which is
             // visually wrong for a content-only secondary window.
-            if let Some(main_window) = app.get_webview_window("main") {
-                main_window.set_menu(menu)?;
-            }
+            // The window is built here (`create: false` in tauri.conf.json) because
+            // on_new_window is only available on Rust-side builders.
+            let main_config = app
+                .config()
+                .app
+                .windows
+                .iter()
+                .find(|w| w.label == "main")
+                .ok_or("main window config not found")?;
+            let main_window = tauri::WebviewWindowBuilder::from_config(app, main_config)?
+                .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+                .build()?;
+            main_window.set_menu(menu)?;
 
             app.on_menu_event(move |app_handle, event| {
                 let _ = app_handle.emit("menu-event", event.id().as_ref().to_string());
@@ -604,5 +659,40 @@ mod tests {
         assert!(consume_write_grant(&mut g, "old").is_err());
         g = Some("new".to_string());
         assert!(consume_write_grant(&mut g, "new").is_ok());
+    }
+
+    fn url(s: &str) -> tauri::Url {
+        tauri::Url::parse(s).unwrap()
+    }
+
+    #[test]
+    fn app_urls_are_allowed() {
+        let dev = url("http://localhost:1420");
+        for u in [
+            "http://tauri.localhost/",
+            "https://tauri.localhost/x?preview=true",
+            "tauri://localhost/",
+            "about:blank",
+            "about:srcdoc",
+            "blob:http://tauri.localhost/6f1c1b9e-0000-4000-8000-000000000000",
+        ] {
+            assert!(is_app_navigation(&url(u), None), "{u}");
+        }
+        assert!(is_app_navigation(&url("http://localhost:1420/?preview=true"), Some(&dev)));
+    }
+
+    #[test]
+    fn foreign_urls_are_blocked() {
+        let dev = url("http://localhost:1420");
+        assert!(!is_app_navigation(&url("https://example.com/"), None));
+        assert!(!is_app_navigation(&url("http://localhost:1421/"), Some(&dev)));
+        assert!(!is_app_navigation(&url("http://localhost:1420/"), None));
+        assert!(!is_app_navigation(
+            &url("blob:https://example.com/6f1c1b9e-0000-4000-8000-000000000000"),
+            None
+        ));
+        assert!(!is_app_navigation(&url("file:///C:/x"), None));
+        assert!(!is_app_navigation(&url("data:text/html,x"), None));
+        assert!(!is_app_navigation(&url("mailto:a@b.c"), None));
     }
 }

@@ -50,6 +50,7 @@ Details for each are in `docs/SPEC.md`.
 - `settingsLoaded` is a ref, so it can't be a `useEffect` dependency.
 - For event listeners that must not drop events, use empty deps plus a ref to the latest values.
 - Wrap async Tauri setup in `try/catch` with `console.error`. Rejections are otherwise swallowed.
+- Links in rendered Markdown must go through `src/lib/links.ts` `handlePreviewLinkEvent`; the native guard in `lib.rs` blocks every other in-app navigation.
 
 ## Software factory
 

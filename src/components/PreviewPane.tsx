@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useRef, useState } from 'react'
 import { renderMarkdown } from '../lib/preview'
+import { handlePreviewLinkEvent } from '../lib/links'
 
 type PreviewPaneProps = {
   content: string
@@ -51,7 +52,11 @@ const PreviewPane = forwardRef<HTMLDivElement, PreviewPaneProps>(function Previe
     else if (ref) ref.current = node
   }
 
+  const handleLinkEvent = (e: React.MouseEvent<HTMLDivElement>) =>
+    handlePreviewLinkEvent(e, { root: e.currentTarget, scrollContainer: e.currentTarget })
+
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (handleLinkEvent(e)) return
     if (!onHeadingClick) return
     let target: HTMLElement | null = e.target as HTMLElement | null
     while (target && target !== e.currentTarget) {
@@ -72,6 +77,8 @@ const PreviewPane = forwardRef<HTMLDivElement, PreviewPaneProps>(function Previe
       ref={setRefs}
       onScroll={onScroll}
       onClick={handleClick}
+      onAuxClick={handleLinkEvent}
+      onMouseDown={handleLinkEvent}
       className="preview-content"
       style={{
         height: '100%',
