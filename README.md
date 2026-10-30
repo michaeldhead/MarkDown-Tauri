@@ -16,13 +16,19 @@ A fast, native Windows Markdown editor built with Tauri 2, React 19, and CodeMir
 - **Right-click context menu** — formatting, heading submenu, word wrap, line numbers, clipboard, save
 - **Code Block language picker** — select or change a language on any fenced code block
 - **Word Wrap** and **Show Line Numbers** — toggleable, persisted across sessions
+- **Focus Mode** (`Ctrl+Shift+F`) — hide the chrome and write without distraction
+- **Dimmed Markdown markers** — syntax characters fade back so the text stands out
+- **Tab size setting** — choose how wide a tab is
+- **Trailing-space markers** and a **hard line break** toolbar button
 
 ### Preview
 - **Live split preview** with anchor-based scroll sync — both directions, interpolated
 - **Pop-out preview window** — detach into its own floating window with live scroll sync
 - **Click any heading** in the preview to jump the editor to that line
 - **GFM tables** rendered correctly
-- **Syntax highlighting** in fenced code blocks
+- **Syntax highlighting** in fenced code blocks, with scroll anchors on code blocks
+- **List markers restored** — bullets and numbers render correctly in the preview
+- **Links open in your default browser** — in-app navigation is blocked
 
 ### Navigation
 - **Document Topology** sidebar — heading structure with word counts and active section highlight
@@ -43,11 +49,13 @@ A fast, native Windows Markdown editor built with Tauri 2, React 19, and CodeMir
 - **Version Timeline** — every `Ctrl+S` creates a snapshot; browse and restore from the sidebar
 
 ### Export
-- **HTML** (Styled or Clean), **PDF**, **Plain Text**, **Copy Markdown**
+- **HTML** (Styled or Clean), **PDF**, **Word (.docx)**, **Plain Text**, **Copy Markdown**
+- **Rebuilt exports** — HTML, Plain Text, PDF, and Word are generated in the app, with real Word heading styles
+- **Export Preview Panel** — review the output before you export
 - **Export Dialog** (`Ctrl+Shift+E`) — all options in one place
 
 ### Customization
-- **GHS Dark** and **GHS Ink** (light) themes
+- **GHS Dark** and **GHS Ink** (light) themes, plus **Auto**, which follows Windows
 - **10 accent color presets** — updates all accents app-wide instantly
 - **Font size slider** — 12–20px, live preview
 - **Editor font** — Cascadia Code, Consolas, Georgia, Arial
@@ -69,6 +77,7 @@ A fast, native Windows Markdown editor built with Tauri 2, React 19, and CodeMir
 | `Ctrl+Shift+K` | Code Block |
 | `Ctrl+K` | Command Palette |
 | `Ctrl+Shift+E` | Export Dialog |
+| `Ctrl+Shift+F` | Focus Mode |
 | `Ctrl+F` | Find / Replace |
 | `F1` | Help |
 

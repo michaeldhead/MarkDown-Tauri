@@ -1,6 +1,6 @@
 [package]
 name = "markdown-tauri"
-version = "0.2.3"
+version = "0.3.0"
 description = "GHS Markdown Editor — Tauri"
 authors = []
 edition = "2021"
